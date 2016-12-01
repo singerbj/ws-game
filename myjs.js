@@ -1,4 +1,4 @@
-/*global console, $, window, WebSocket, setInterval*/
+/*global console, $, window, WebSocket, setInterval, document*/
 (function () {
     'use strict';
     window.onload = function () {
@@ -7,6 +7,8 @@
         var run = $('#run');
         var clear = $('#clear');
         var p = $('#result');
+        var canvas = document.getElementById('canvas');
+        var ctx = canvas.getContext('2d');
 
         run.click(function () {
             var obj = {
@@ -46,7 +48,49 @@
             };
             window.ws.onmessage = function (m) {
                 console.log('recieved: ', m);
+
+                //TODO: render everytime message is recieved, maybe more often
             };
+
+
+
+            canvas.onclick = function (e) {
+                var rect = canvas.getBoundingClientRect();
+                var x = e.clientX - rect.left;
+                var y = e.clientY - rect.top;
+                // createAndFireBullet(x, y);
+
+                //TODO: send fire bullet message
+            };
+
+            window.addEventListener('keydown', function (e) {
+                var code = e.keyCode;
+                // var checkCode = function (a, b, direction) {
+                //     if (code === a || code === b) {
+                //         dObj[direction] = true;
+                //     }
+                // };
+                // checkCode(37, 65, 'left');
+                // checkCode(38, 87, 'up');
+                // checkCode(39, 68, 'right');
+                // checkCode(40, 83, 'down');
+
+                // TODO: send keydown codes message
+            });
+            window.addEventListener('keyup', function (e) {
+                var code = e.keyCode;
+                // var checkCode = function (a, b, direction) {
+                //     if (code === a || code === b) {
+                //         dObj[direction] = false;
+                //     }
+                // };
+                // checkCode(37, 65, 'left');
+                // checkCode(38, 87, 'up');
+                // checkCode(39, 68, 'right');
+                // checkCode(40, 83, 'down');
+
+                // TODO: send keyup codes message
+            });
         };
         start('ws://' + window.location.hostname + ":8081");
     };
