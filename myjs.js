@@ -1,97 +1,168 @@
 /*global console, $, window, WebSocket, setInterval, document*/
-(function () {
+(function() {
     'use strict';
-    window.onload = function () {
-        var text = $('#text');
-        var options = $('#options');
-        var run = $('#run');
-        var clear = $('#clear');
-        var p = $('#result');
-        var canvas = document.getElementById('canvas');
-        var ctx = canvas.getContext('2d');
+    var setCanvasSize = function(ctx) {
+        var container = $("body");
 
-        run.click(function () {
-            var obj = {
-                text: text.val(),
-                options: options.val().replace(' ', '').split(',')
-            };
-            console.log('sent:', obj);
-            window.ws.send(JSON.stringify(obj));
+        var width = ctx.canvas.width;
+        var height = ctx.canvas.height;
+        var maxWidth = container.width();
+        var maxHeight = container.height();
+
+        console.log(width, height, maxWidth, maxHeight);
+
+        var ratio = maxWidth / width;
+        if (height * ratio > maxHeight) {
+            ratio = maxHeight / height;
+        }
+        ctx.canvas.width = (width * ratio);
+        ctx.canvas.height = (height * ratio);
+    };
+
+    window.onload = function() {
+        var canvas = $('#canvas');
+        var ctx = canvas[0].getContext('2d');
+
+        setCanvasSize(ctx);
+        $(window).resize(function() {
+            setCanvasSize(ctx);
         });
+        var entities = {};
+        var player;
+        var websocket;
 
-        clear.click(function () {
-            p.empty();
-            text.val('');
-            options.val('');
-        });
-
-        var start = function (websocketServerLocation) {
-            if (window.ws) {
-                window.ws.close();
-                delete window.ws;
+        var start = function(websocketServerLocation) {
+            if (websocket) {
+                websocket.close();
+                // delete websocket;
             }
-            window.ws = new WebSocket(websocketServerLocation);
-            window.ws.onopen = function () {
+            websocket = new WebSocket(websocketServerLocation);
+            websocket.onopen = function() {
                 if (window.timerID) {
                     window.clearInterval(window.timerID);
                     window.timerID = 0;
                 }
                 console.log('websocket opened');
             };
-            window.ws.onclose = function () {
+            websocket.onclose = function() {
                 console.log('websocket closed');
                 if (!window.timerID) {
-                    window.timerID = setInterval(function () {
+                    window.timerID = setInterval(function() {
                         start(websocketServerLocation);
                     }, 2000);
                 }
             };
-            window.ws.onmessage = function (m) {
-                console.log('recieved: ', m);
 
-                //TODO: render everytime message is recieved, maybe more often
+            var obj;
+            websocket.onmessage = function(m) {
+                obj = JSON.parse(m.data);
+                entities = obj.entities;
+                player = obj.player;
+                // console.log('recieved: ', m);
             };
 
+            var send = function(obj) {
+                // console.log('sending: ', obj);
+                if (websocket.readyState === 1) {
+                    websocket.send(JSON.stringify(obj));
+                }
+            };
 
-
-            canvas.onclick = function (e) {
-                var rect = canvas.getBoundingClientRect();
+            canvas.click(function(e) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                var rect = ctx.canvas.getBoundingClientRect();
                 var x = e.clientX - rect.left;
                 var y = e.clientY - rect.top;
-                // createAndFireBullet(x, y);
 
-                //TODO: send fire bullet message
+                send({
+                    type: 'event',
+                    event: 'click',
+                    x: x,
+                    y: y
+                });
+            });
+
+            canvas.contextmenu(function(e) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                //right click....maybe do sumthin here?
+            });
+
+            window.addEventListener('keydown', function(e) {
+                var code = e.keyCode;
+                if (code === 82) {
+                    send({
+                        type: 'action',
+                        action: 'reload'
+                    });
+                } else {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    var checkCode = function(a, b, direction) {
+                        if (code === a || code === b) {
+                            send({
+                                type: 'event',
+                                event: 'keydown',
+                                direction: direction
+                            });
+                        }
+                    };
+                    checkCode(37, 65, 'left');
+                    checkCode(38, 87, 'up');
+                    checkCode(39, 68, 'right');
+                    checkCode(40, 83, 'down');
+                }
+            });
+
+            window.addEventListener('keyup', function(e) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                var code = e.keyCode;
+                var checkCode = function(a, b, direction) {
+                    if (code === a || code === b) {
+                        send({
+                            type: 'event',
+                            event: 'keyup',
+                            direction: direction
+                        });
+                    }
+                };
+                checkCode(37, 65, 'left');
+                checkCode(38, 87, 'up');
+                checkCode(39, 68, 'right');
+                checkCode(40, 83, 'down');
+            });
+
+            //game loop
+            var lastTime;
+            var draw = function() {
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                var e;
+                for (e in entities) {
+                    if (entities[e] !== null) {
+                        ctx.beginPath();
+                        ctx.arc(entities[e].x, entities[e].y, entities[e].r, 0, 2 * Math.PI, false);
+                        ctx.fillStyle = entities[e].color;
+                        ctx.fill();
+                    }
+                }
+
+                if (player) {
+                    ctx.font = "18px serif";
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('Ammo: ' + player.ammo + '/' + player.maxAmmo, 10.5, 30.5);
+                    if (player.reloadPercentage) {
+                        ctx.fillText(player.reloadPercentage + '% reloaded...', 120.5, 30.5);
+                    } else if (player.ammo === 0) {
+                        ctx.fillText('Out of ammo...Press R to reload!', 120.5, 30.5);
+                    }
+                }
+
+                window.requestAnimationFrame(draw);
             };
-
-            window.addEventListener('keydown', function (e) {
-                var code = e.keyCode;
-                // var checkCode = function (a, b, direction) {
-                //     if (code === a || code === b) {
-                //         dObj[direction] = true;
-                //     }
-                // };
-                // checkCode(37, 65, 'left');
-                // checkCode(38, 87, 'up');
-                // checkCode(39, 68, 'right');
-                // checkCode(40, 83, 'down');
-
-                // TODO: send keydown codes message
-            });
-            window.addEventListener('keyup', function (e) {
-                var code = e.keyCode;
-                // var checkCode = function (a, b, direction) {
-                //     if (code === a || code === b) {
-                //         dObj[direction] = false;
-                //     }
-                // };
-                // checkCode(37, 65, 'left');
-                // checkCode(38, 87, 'up');
-                // checkCode(39, 68, 'right');
-                // checkCode(40, 83, 'down');
-
-                // TODO: send keyup codes message
-            });
+            draw();
         };
-        start('ws://' + window.location.hostname + ":8081");
+        start('ws://' + window.location.hostname + ":1337");
     };
 }());

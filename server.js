@@ -1,81 +1,86 @@
 /*global console*/
 
-(function () {
-  'use strict';
+(function() {
+    'use strict';
 
-  // var util = require('util');
-  var fs = require('fs');
-  var WebSocketServer = require('ws').Server;
-  var domain = require('domain');
-  var http = require('http');
-  var Router = require('node-simple-router');
-  // var file = require('file');
-  var router = new Router();
+    // var util = require('util');
+    var fs = require('fs');
+    var WebSocketServer = require('ws').Server;
+    var domain = require('domain');
+    var http = require('http');
+    var Router = require('node-simple-router');
+    // var file = require('file');
+    var router = new Router();
+    var Game = require('./gameLogic');
 
-  var d = domain.create();
-  d.on('error', function (err) {
-    console.error(err);
-  });
-
-  var wss = new WebSocketServer({
-    port: 8081
-  });
-
-  wss.on('connection', function connection(ws) {
-    ws.on('message', function incoming(message) {
-      console.log('received: %s', message);
-      ws.send(message);
+    var d = domain.create();
+    d.on('error', function(err) {
+        console.error(err);
     });
 
-    ws.on('close', function () {
-      var i = wss.clients.indexOf(ws);
-      if (wss.clients.indexOf(ws) > -1) {
-        delete wss.clients[i];
-      }
+    var wss = new WebSocketServer({
+        port: 1337
     });
 
-    ws.on('error', function (err) {
-      console.log(err);
+    Game.startGame(wss.clients);
+
+    wss.on('connection', function connection(ws) {
+        Game.onPlayerConnect(ws);
+
+        ws.on('message', function incoming(message) {
+            Game.handleMessage(message, ws);
+        });
+
+        ws.on('close', function() {
+            Game.onPlayerDisconnect(ws);
+            var i = wss.clients.indexOf(ws);
+            if (wss.clients.indexOf(ws) > -1) {
+                delete wss.clients[i];
+            }
+        });
+
+        ws.on('error', function(err) {
+            console.log(err);
+        });
     });
-  });
 
 
-  router.get("/", function (request, response) {
-    fs.readFile('./index.html', function (err, html) {
-      if (err) {
-        throw err;
-      }
-      response.writeHeader(200, {
-        "Content-Type": "text/html",
-        'Content-Length': html.length,
-        'Accept-Ranges': 'bytes',
-        'Cache-Control': 'no-cache'
-      });
-      response.write(html);
-      response.end();
+    router.get("/", function(request, response) {
+        fs.readFile('./index.html', function(err, html) {
+            if (err) {
+                throw err;
+            }
+            response.writeHeader(200, {
+                "Content-Type": "text/html",
+                'Content-Length': html.length,
+                'Accept-Ranges': 'bytes',
+                'Cache-Control': 'no-cache'
+            });
+            response.write(html);
+            response.end();
+        });
     });
-  });
 
 
-  router.get("/myjs.js", function (request, response) {
-    fs.readFile('./myjs.js', function (err, js) {
-      if (err) {
-        throw err;
-      }
-      response.writeHeader(200, {
-        "Content-Type": "text/javascript",
-        'Content-Length': js.length,
-        'Accept-Ranges': 'bytes',
-        'Cache-Control': 'no-cache'
-      });
-      response.write(js);
-      response.end();
+    router.get("/myjs.js", function(request, response) {
+        fs.readFile('./myjs.js', function(err, js) {
+            if (err) {
+                throw err;
+            }
+            response.writeHeader(200, {
+                "Content-Type": "text/javascript",
+                'Content-Length': js.length,
+                'Accept-Ranges': 'bytes',
+                'Cache-Control': 'no-cache'
+            });
+            response.write(js);
+            response.end();
+        });
     });
-  });
 
-  var server = http.createServer(router);
-  // Listen on port 8080 on localhost
-  server.listen(8080, "localhost");
+    var server = http.createServer(router);
+    // Listen on port 8080 on localhost
+    server.listen(8080);
 
-  console.log('server running on 8080');
+    console.log('server running on 8080');
 }());
