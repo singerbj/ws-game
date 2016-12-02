@@ -1,43 +1,46 @@
-/*global console, setInterval*/
+/*global console, setInterval, module*/
 
-(function() {
+(function () {
     'use strict';
 
     var clients;
     var playerMap = {};
+    var canvasWidth = 1920;
+    var canvasHeight = 1080;
 
-    var getCenterAndRadius = function(s) {
-        var r = {};
-        r.x = s.x;
-        r.y = s.y;
-        r.r = s.r;
-        return r;
+    var getCenterAndRadius = function (s) {
+        if (s) {
+            var r = {};
+            r.x = s.x;
+            r.y = s.y;
+            r.r = s.r;
+            return r;
+        }
     };
 
-    var collisionCheck = function(s1, s2) {
+    var collisionCheck = function (s1, s2) {
         try {
             var crS1 = getCenterAndRadius(s1);
             var crS2 = getCenterAndRadius(s2);
+            if (crS1 && crS2) {
+                var dx = crS1.x > crS2.x ? crS1.x - crS2.x : crS2.x - crS1.x;
+                var dy = crS1.y > crS2.y ? crS1.y - crS2.y : crS2.y - crS1.y;
+                var distance = Math.sqrt((dx * dx) + (dy * dy));
 
-            var dx = crS1.x > crS2.x ? crS1.x - crS2.x : crS2.x - crS1.x;
-            var dy = crS1.y > crS2.y ? crS1.y - crS2.y : crS2.y - crS1.y;
-            var distance = Math.sqrt((dx * dx) + (dy * dy));
-
-            if (distance <= (crS1.r + crS2.r)) {
-                s1.onCollision(s2);
-                s2.onCollision(s1);
+                if (distance <= (crS1.r + crS2.r)) {
+                    s1.onCollision(s2);
+                    s2.onCollision(s1);
+                }
             }
         } catch (e) {
             console.log(e.message);
         }
     };
 
-    var objIdCounter = 1;
-
-    var Circle = function(x, y, r, options) {
-        objIdCounter += 1;
+    var uuidV4 = require('uuid/v4');
+    var Circle = function (x, y, r, options) {
         var circle = {
-            id: objIdCounter,
+            id: uuidV4(),
             type: "Circle",
             x: x,
             y: y,
@@ -55,29 +58,42 @@
         return circle;
     };
 
-    var rand = function(min, max) {
+    var rand = function (min, max) {
         return Math.floor(Math.random() * (max - min)) + min;
     };
 
     var entities = {};
 
-    var createAndAddThing = function() {
+    var createAndAddThing = function () {
         var negativeX = [1, -1][Math.round(Math.random())];
         var negativeY = [1, -1][Math.round(Math.random())];
         var newX = Math.random(0, 20);
         var newY = Math.random(0, 20);
         var vx = negativeX * newX;
         var vy = negativeY * newY;
-        var thing = new Circle(rand(0, 800), rand(0, 600), rand(10, 40), {
+        var x = rand(0, 800);
+        var y = rand(0, 600);
+        var r = rand(10, 40);
+        var width = r * 2;
+        var height = r * 2;
+        var thing = new Circle(x, y, r, {
             color: 'blue',
-            beforeUpdate: function() {
+            beforeUpdate: function () {
                 this.color = 'blue';
                 this.x += vx;
                 this.y += vy;
+                if (this.x < -width || this.y < -height || this.x > (canvasWidth + width) || this.y > (canvasHeight + height)) {
+                    delete entities[this.id];
+                }
             },
-            onCollision: function(collidedType) {
+            onCollision: function (collidedObj) {
                 this.color = 'purple';
-            }
+                if (collidedObj.type === 'bullet' && collidedObj.playerId !== this.id) {
+                    this.isDead = true;
+                    delete entities[this.id];
+                }
+            },
+            isDead: false
         });
         entities[thing.id] = thing;
     };
@@ -87,14 +103,19 @@
     for (i = 0; i < 5; i += 1) {
         createAndAddThing();
     }
-    setInterval(function() {
+    setInterval(function () {
         createAndAddThing();
-    }, 2000);
+    }, 500);
 
-    var addNewPlayer = function(ws) {
-        var player = new Circle(400, 300, 10, {
-            color: 'red',
-            beforeUpdate: function() {
+    var addNewPlayer = function (ws) {
+        var player = new Circle(rand(0, canvasWidth), rand(0, canvasHeight), 10, {
+            color: {
+                r: rand(100, 200),
+                g: rand(100, 200),
+                b: rand(100, 200),
+                a: 1
+            },
+            beforeUpdate: function () {
                 if (this.timeToReload && Date.now() >= this.timeToReload) {
                     this.reloading = false;
                     delete this.timeToReload;
@@ -107,7 +128,7 @@
                     this.timeToReload = Date.now() + this.reloadTime;
                 }
             },
-            onCollision: function(collidedObj) {
+            onCollision: function (collidedObj) {
                 if (collidedObj.type === 'bullet' && collidedObj.playerId !== this.id) {
                     this.isDead = true;
                     delete entities[this.id];
@@ -131,7 +152,7 @@
             reloadTime: 1250,
             reloading: false,
             isDead: false,
-            reload: function() {
+            reload: function () {
                 if (this.reloading === false && this.ammo < 5) {
                     this.reloading = true;
                 }
@@ -140,26 +161,27 @@
         entities[player.id] = player;
         playerMap[player.id] = player;
         ws.playerId = player.id;
+        console.log('player added: ' + ws.playerId, player.color);
     };
 
-    var createAndFireBullet = function(x, y, ws) {
+    var fireGun = function (x, y, ws) {
         var player = playerMap[ws.playerId];
-        if (player.ammo > 0 && player.reloading === false && !player.isDead) {
+        if (player && player.ammo > 0 && player.reloading === false && !player.isDead) {
             player.ammo -= 1;
-            var speed = 7;
+            var speed = 10;
             var dist = Math.sqrt(Math.pow((x - player.x), 2) + Math.pow((y - player.y), 2));
             var vx = ((x - player.x) / dist) * speed;
             var vy = ((y - player.y) / dist) * speed;
 
-            var bullet = new Circle(player.x, player.y, 3, {
+            var bullet = new Circle(player.x, player.y, 2, {
                 type: 'bullet',
                 playerId: player.id,
                 color: 'black',
-                beforeUpdate: function() {
+                beforeUpdate: function () {
                     if (!this.timeAlive) {
                         this.timeAlive = 0;
                     }
-                    if (this.timeAlive >= 150) {
+                    if (this.timeAlive >= 100) {
                         delete entities[this.id];
                     } else {
                         this.timeAlive = this.timeAlive + 1;
@@ -167,19 +189,21 @@
                         this.y = this.y + vy;
                     }
                 },
-                onCollision: function(collidedObj) {
+                onCollision: function (collidedObj) {
                     if (collidedObj.id !== this.playerId) {
                         this.color = 'orange';
+                        this.isDead = true;
                         delete entities[this.id];
                     }
-                }
+                },
+                isDead: false
             });
             entities[bullet.id] = bullet;
         }
     };
 
-    var updateEntities = function(dt) {
-        var adjustAcc = function(key, val, player) {
+    var updateEntities = function (dt) {
+        var adjustAcc = function (key, val, player) {
             if (player.dObj[key]) {
                 if (player.acc[key] <= 30) {
                     player.acc[key] += val;
@@ -196,28 +220,27 @@
         };
 
         var playerId, player;
+        var pps = 4;
+
         for (playerId in playerMap) {
             if (playerMap[playerId] !== undefined) {
                 player = playerMap[playerId];
                 adjustAcc('left', 3, player);
-                adjustAcc('up', 3, player); //this method of jumping doesnt work
+                adjustAcc('up', 3, player);
                 adjustAcc('right', 3, player);
                 adjustAcc('down', 3, player);
 
-                var pps = 5;
                 player.x -= (pps * (player.acc.left - player.acc.right) * dt);
                 player.y -= (pps * (player.acc.up - player.acc.down) * dt);
             }
         }
     };
 
-    var update = function(dt) {
+    var update = function (dt) {
         //checkCollisions
-        var entityCount = 0;
         var e;
         for (e in entities) {
             if (entities[e] !== undefined) {
-                entityCount += 1;
                 if (entities[e].beforeUpdate) {
                     entities[e].beforeUpdate();
                 }
@@ -246,14 +269,15 @@
         }
     };
 
-    var render = function() {
+    var render = function () {
         if (clients && clients.length > 0) {
-            clients.forEach(function(ws) {
+            clients.forEach(function (ws) {
                 if (ws.readyState === 1) {
                     ws.send(JSON.stringify({
                         player: playerMap[ws.playerId],
                         entities: entities
                     }));
+                    // console.log(Object.keys(entities).length);
                 }
             });
         }
@@ -262,7 +286,7 @@
     //game loop
     var raf = require('raf');
     var lastTime;
-    var draw = function() {
+    var draw = function () {
         //update time
         var now = Date.now();
         if (lastTime) {
@@ -276,31 +300,31 @@
 
     module.exports = {
         started: false,
-        startGame: function(wssClients) {
+        startGame: function (wssClients) {
             clients = wssClients;
             this.started = true;
             draw();
         },
-        handleMessage: function(message, ws) {
+        handleMessage: function (message, ws) {
             var msgObj = JSON.parse(message);
             if (msgObj.type === 'event') {
                 if (msgObj.event === 'click') {
-                    createAndFireBullet(msgObj.x, msgObj.y, ws);
-                } else if (msgObj.event === 'keyup') {
+                    fireGun(msgObj.x, msgObj.y, ws);
+                } else if (msgObj.event === 'keyup' && playerMap[ws.playerId] !== undefined) {
                     playerMap[ws.playerId].dObj[msgObj.direction] = false;
-                } else if (msgObj.event === 'keydown') {
+                } else if (msgObj.event === 'keydown' && playerMap[ws.playerId] !== undefined) {
                     playerMap[ws.playerId].dObj[msgObj.direction] = true;
                 }
             } else if (msgObj.type === 'action') {
-                if (msgObj.action === 'reload') {
+                if (msgObj.action === 'reload' && playerMap[ws.playerId] !== undefined) {
                     playerMap[ws.playerId].reload();
                 }
             }
         },
-        onPlayerConnect: function(ws) {
+        onPlayerConnect: function (ws) {
             addNewPlayer(ws);
         },
-        onPlayerDisconnect: function(ws) {
+        onPlayerDisconnect: function (ws) {
             delete entities[ws.playerId];
             delete playerMap[ws.playerId];
         }
