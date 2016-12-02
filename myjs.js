@@ -23,6 +23,7 @@
     };
 
     window.onload = function () {
+        var body = $('body');
         var canvas = $('#canvas');
         var ctx = canvas[0].getContext('2d');
 
@@ -32,6 +33,8 @@
         });
         var entities = {};
         var player;
+        var mouseX;
+        var mouseY;
         var websocket;
 
         var start = function (websocketServerLocation) {
@@ -72,17 +75,30 @@
             };
 
             canvas.click(function (e) {
-                e.preventDefault();
-                e.stopImmediatePropagation();
                 var rect = ctx.canvas.getBoundingClientRect();
-                var x = e.clientX - rect.left;
-                var y = e.clientY - rect.top;
+                mouseX = e.clientX - rect.left;
+                mouseY = e.clientY - rect.top;
 
                 send({
                     type: 'event',
                     event: 'click',
-                    x: x,
-                    y: y
+                    x: mouseX,
+                    y: mouseY
+                });
+            });
+
+            body.mousemove(function (e) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                var rect = ctx.canvas.getBoundingClientRect();
+                mouseX = e.clientX - rect.left;
+                mouseY = e.clientY - rect.top;
+
+                send({
+                    type: 'event',
+                    event: 'mousemove',
+                    x: mouseX,
+                    y: mouseY
                 });
             });
 
@@ -107,7 +123,9 @@
                             send({
                                 type: 'event',
                                 event: 'keydown',
-                                direction: direction
+                                direction: direction,
+                                x: mouseX,
+                                y: mouseY
                             });
                         }
                     };
@@ -143,17 +161,27 @@
                 var e;
                 for (e in entities) {
                     if (entities[e] !== null) {
-                        ctx.beginPath();
-                        ctx.arc(entities[e].x, entities[e].y, entities[e].r, 0, 2 * Math.PI, false);
-                        if (typeof entities[e].color === 'string') {
-                            ctx.fillStyle = entities[e].color;
-                        } else if (typeof entities[e].color === 'object') {
-                            ctx.fillStyle = "rgba(" + entities[e].color.r + ", " + entities[e].color.g + ", " + entities[e].color.b + ", " + entities[e].color.a || 1 + ")";
-                        } else {
-                            ctx.fillStyle = 'black';
+                        if (entities[e].shape === 'circle') {
+                            ctx.beginPath();
+                            ctx.arc(entities[e].x, entities[e].y, entities[e].r, 0, 2 * Math.PI, false);
+                            if (typeof entities[e].color === 'string') {
+                                ctx.fillStyle = entities[e].color;
+                            } else if (typeof entities[e].color === 'object') {
+                                ctx.fillStyle = "rgba(" + entities[e].color.r + ", " + entities[e].color.g + ", " + entities[e].color.b + ", " + entities[e].color.a || 1 + ")";
+                            } else {
+                                ctx.fillStyle = 'black';
+                            }
+                            ctx.fill();
+                        } else if (entities[e].shape === 'line') {
+                            ctx.beginPath();
+                            ctx.moveTo(entities[e].x1, entities[e].y1);
+                            ctx.lineTo(entities[e].x2, entities[e].y2);
+                            ctx.lineWidth = 3;
+                            ctx.strokeStyle = 'black';
+                            ctx.stroke();
                         }
-                        ctx.fill();
 
+                        // add stroke to current player
                         if (player && player.id === entities[e].id) {
                             ctx.lineWidth = 3;
                             ctx.strokeStyle = 'black';
@@ -169,8 +197,16 @@
                     if (player.reloadPercentage) {
                         ctx.fillText(player.reloadPercentage + '% reloaded...', 120.5, 30.5);
                     } else if (player.ammo === 0) {
-                        ctx.fillText('Out of ammo...Press R to reload!', 120.5, 30.5);
+                        ctx.fillText('Press R to reload!', 120.5, 30.5);
                     }
+
+                    //create gun line on player
+                    //     ctx.beginPath();
+                    //     ctx.moveTo(player.x, player.y);
+                    //     ctx.lineTo(mouseX, mouseY);
+                    //     ctx.lineWidth = 3;
+                    //     ctx.strokeStyle = 'black';
+                    //     ctx.stroke();
                 }
 
                 window.requestAnimationFrame(draw);

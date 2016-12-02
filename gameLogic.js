@@ -5,6 +5,7 @@
 
     var clients;
     var playerMap = {};
+    var gunMap = {};
     var canvasWidth = 1920;
     var canvasHeight = 1080;
 
@@ -20,16 +21,18 @@
 
     var collisionCheck = function (s1, s2) {
         try {
-            var crS1 = getCenterAndRadius(s1);
-            var crS2 = getCenterAndRadius(s2);
-            if (crS1 && crS2) {
-                var dx = crS1.x > crS2.x ? crS1.x - crS2.x : crS2.x - crS1.x;
-                var dy = crS1.y > crS2.y ? crS1.y - crS2.y : crS2.y - crS1.y;
-                var distance = Math.sqrt((dx * dx) + (dy * dy));
+            if (s1 && s2 && s1.shape !== 'line' && s2.shape !== 'line') {
+                var crS1 = getCenterAndRadius(s1);
+                var crS2 = getCenterAndRadius(s2);
+                if (crS1 && crS2) {
+                    var dx = crS1.x > crS2.x ? crS1.x - crS2.x : crS2.x - crS1.x;
+                    var dy = crS1.y > crS2.y ? crS1.y - crS2.y : crS2.y - crS1.y;
+                    var distance = Math.sqrt((dx * dx) + (dy * dy));
 
-                if (distance <= (crS1.r + crS2.r)) {
-                    s1.onCollision(s2);
-                    s2.onCollision(s1);
+                    if (distance <= (crS1.r + crS2.r)) {
+                        s1.onCollision(s2);
+                        s2.onCollision(s1);
+                    }
                 }
             }
         } catch (e) {
@@ -41,7 +44,7 @@
     var Circle = function (x, y, r, options) {
         var circle = {
             id: uuidV4(),
-            type: "Circle",
+            shape: "circle",
             x: x,
             y: y,
             r: r,
@@ -56,6 +59,27 @@
         }
 
         return circle;
+    };
+
+    var Line = function (x1, y1, x2, y2, options) {
+        var line = {
+            id: uuidV4(),
+            shape: "line",
+            x1: x1,
+            y1: y1,
+            x2: x2,
+            y2: y2,
+            color: 'black'
+        };
+
+        var key;
+        for (key in options) {
+            if (options[key] !== undefined) {
+                line[key] = options[key];
+            }
+        }
+
+        return line;
     };
 
     var rand = function (min, max) {
@@ -107,6 +131,36 @@
         createAndAddThing();
     }, 500);
 
+    var manageGun = function (ws) {
+        var player = playerMap[ws.playerId];
+        if (gunMap[ws.playerId]) {
+            var lastGunId = gunMap[ws.playerId].id;
+            delete gunMap[ws.playerId];
+            delete entities[lastGunId];
+        }
+        if (player && !player.isDead) {
+            var gunLength = 20;
+            var slope = (player.mouse.y - player.y) / (player.mouse.x - player.x);
+            var k = gunLength / (Math.sqrt(1 + Math.pow(slope, 2)));
+            var gunX;
+            var gunY;
+            if (player.mouse.x < player.x) {
+                gunX = player.x - k;
+                gunY = (player.y - (k * slope));
+            } else {
+                gunX = player.x + k;
+                gunY = player.y + (k * slope);
+            }
+
+            var gun = new Line(player.x, player.y, gunX, gunY, {
+                type: 'gun',
+                color: 'black'
+            });
+            entities[gun.id] = gun;
+            gunMap[ws.playerId] = gun;
+        }
+    };
+
     var addNewPlayer = function (ws) {
         var player = new Circle(rand(0, canvasWidth), rand(0, canvasHeight), 10, {
             color: {
@@ -127,11 +181,14 @@
                 if (this.reloading === true && !this.timeToReload) {
                     this.timeToReload = Date.now() + this.reloadTime;
                 }
+                manageGun(ws);
             },
             onCollision: function (collidedObj) {
-                if (collidedObj.type === 'bullet' && collidedObj.playerId !== this.id) {
+                if (collidedObj && collidedObj.type === 'bullet' && collidedObj.playerId !== this.id) {
                     this.isDead = true;
+                    delete entities[gunMap[this.id].id];
                     delete entities[this.id];
+                    delete gunMap[this.id];
                     delete playerMap[this.id];
                 }
             },
@@ -156,6 +213,10 @@
                 if (this.reloading === false && this.ammo < 5) {
                     this.reloading = true;
                 }
+            },
+            mouse: {
+                x: canvasWidth / 2,
+                y: canvasHeight / 2
             }
         });
         entities[player.id] = player;
@@ -312,8 +373,28 @@
                     fireGun(msgObj.x, msgObj.y, ws);
                 } else if (msgObj.event === 'keyup' && playerMap[ws.playerId] !== undefined) {
                     playerMap[ws.playerId].dObj[msgObj.direction] = false;
+                    if (msgObj.x && msgObj.y) {
+                        playerMap[ws.playerId].mouse = {
+                            x: msgObj.x,
+                            y: msgObj.y
+                        };
+                    }
                 } else if (msgObj.event === 'keydown' && playerMap[ws.playerId] !== undefined) {
                     playerMap[ws.playerId].dObj[msgObj.direction] = true;
+                    if (msgObj.x && msgObj.y) {
+                        playerMap[ws.playerId].mouse = {
+                            x: msgObj.x,
+                            y: msgObj.y
+                        };
+                    }
+                } else if (msgObj.event === 'mousemove' && playerMap[ws.playerId] !== undefined) {
+                    if (msgObj.x && msgObj.y) {
+                        playerMap[ws.playerId].mouse = {
+                            x: msgObj.x,
+                            y: msgObj.y
+                        };
+                    }
+                    manageGun(ws);
                 }
             } else if (msgObj.type === 'action') {
                 if (msgObj.action === 'reload' && playerMap[ws.playerId] !== undefined) {
@@ -325,7 +406,9 @@
             addNewPlayer(ws);
         },
         onPlayerDisconnect: function (ws) {
+            delete entities[gunMap[ws.playerId].id];
             delete entities[ws.playerId];
+            delete gunMap[ws.playerId];
             delete playerMap[ws.playerId];
         }
     };
