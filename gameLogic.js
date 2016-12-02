@@ -131,38 +131,12 @@
         createAndAddThing();
     }, 1000);
 
-    var manageGun = function (ws) {
-        var player = playerMap[ws.playerId];
-        if (gunMap[ws.playerId]) {
-            var lastGunId = gunMap[ws.playerId].id;
-            delete gunMap[ws.playerId];
-            delete entities[lastGunId];
-        }
-        if (player && !player.isDead) {
-            var gunLength = 20;
-            var slope = (player.mouse.y - player.y) / (player.mouse.x - player.x);
-            var k = gunLength / (Math.sqrt(1 + Math.pow(slope, 2)));
-            var gunX;
-            var gunY;
-            if (player.mouse.x < player.x) {
-                gunX = player.x - k;
-                gunY = (player.y - (k * slope));
-            } else {
-                gunX = player.x + k;
-                gunY = player.y + (k * slope);
-            }
 
-            var gun = new Line(player.x, player.y, gunX, gunY, {
-                type: 'gun',
-                color: 'black'
-            });
-            entities[gun.id] = gun;
-            gunMap[ws.playerId] = gun;
-        }
-    };
 
     var addNewPlayer = function (ws) {
-        var player = new Circle(rand(0, canvasWidth), rand(0, canvasHeight), 10, {
+        //var player = new Circle(rand(0, canvasWidth), rand(0, canvasHeight), 10, {
+        var player = new Circle(rand(0, 300), rand(0, 300), 10, {
+            type: 'player',
             color: {
                 r: rand(100, 200),
                 g: rand(100, 200),
@@ -170,6 +144,7 @@
                 a: 1
             },
             beforeUpdate: function () {
+                this.healthPercentage = Math.floor((this.health / this.maxHealth) * 100);
                 if (this.timeToReload && Date.now() >= this.timeToReload) {
                     this.reloading = false;
                     delete this.timeToReload;
@@ -181,17 +156,9 @@
                 if (this.reloading === true && !this.timeToReload) {
                     this.timeToReload = Date.now() + this.reloadTime;
                 }
-                manageGun(ws);
+                this.manageGun();
             },
-            onCollision: function (collidedObj) {
-                if (collidedObj && collidedObj.type === 'bullet' && collidedObj.playerId !== this.id) {
-                    this.isDead = true;
-                    delete entities[gunMap[this.id].id];
-                    delete entities[this.id];
-                    delete gunMap[this.id];
-                    delete playerMap[this.id];
-                }
-            },
+            onCollision: function (collidedObj) {},
             acc: {
                 left: 0,
                 up: 0,
@@ -204,13 +171,15 @@
                 left: false,
                 right: false
             },
-            ammo: 5,
+            maxHealth: 1000,
+            health: 1000,
             maxAmmo: 5,
+            ammo: 5,
             reloadTime: 1250,
             reloading: false,
             isDead: false,
             reload: function () {
-                if (this.reloading === false && this.ammo < 5) {
+                if (!this.isDead && this.reloading === false && this.ammo < 5) {
                     this.reloading = true;
                 }
             },
@@ -225,50 +194,102 @@
                     left: false,
                     right: false
                 };
-            }
+            },
+            respawn: function () {
+                if (this.isDead) {
+                    this.x = rand(0, canvasWidth);
+                    this.y = rand(0, canvasHeight);
+                    entities[this.id] = this;
+                    delete this.timeToReload;
+                    delete this.reloadPercentage;
+                    this.health = this.maxHealth;
+                    this.ammo = this.maxAmmo;
+                    this.isDead = false;
+                }
+            },
+            fireGun: function (x, y, ws) {
+                var player = this;
+                if (player.ammo > 0 && player.reloading === false && !player.isDead) {
+                    player.ammo -= 1;
+                    var speed = 10;
+                    var dist = Math.sqrt(Math.pow((x - player.x), 2) + Math.pow((y - player.y), 2));
+                    var vx = ((x - player.x) / dist) * speed;
+                    var vy = ((y - player.y) / dist) * speed;
+
+                    var bullet = new Circle(player.x, player.y, 2, {
+                        type: 'bullet',
+                        playerId: player.id,
+                        color: 'black',
+                        damage: 400,
+                        beforeUpdate: function () {
+                            if (!this.timeAlive) {
+                                this.timeAlive = 0;
+                            }
+                            if (this.timeAlive >= 100) {
+                                delete entities[this.id];
+                            } else {
+                                this.timeAlive = this.timeAlive + 1;
+                                this.x = this.x + vx;
+                                this.y = this.y + vy;
+                            }
+                        },
+                        onCollision: function (collidedObj) {
+                            if (collidedObj && collidedObj.type === 'player' && collidedObj.id !== this.playerId && !collidedObj.isDead) {
+                                if (collidedObj.health > 0 && (collidedObj.health - this.damage) > 0) {
+                                    collidedObj.health = collidedObj.health - this.damage;
+                                } else {
+                                    collidedObj.health = 0;
+                                    collidedObj.isDead = true;
+                                    collidedObj.deaths += 1;
+                                    if (gunMap[collidedObj.id]) {
+                                        delete entities[gunMap[collidedObj.id].id];
+                                    }
+                                    delete gunMap[collidedObj.id];
+                                    player.kills += 1;
+                                }
+                                delete entities[this.id];
+                            }
+                        }
+                    });
+                    entities[bullet.id] = bullet;
+                }
+            },
+            manageGun: function () {
+                var player = playerMap[ws.playerId];
+                if (gunMap[ws.playerId]) {
+                    var lastGunId = gunMap[ws.playerId].id;
+                    delete gunMap[ws.playerId];
+                    delete entities[lastGunId];
+                }
+                if (player && !player.isDead) {
+                    var gunLength = 20;
+                    var slope = (player.mouse.y - player.y) / (player.mouse.x - player.x);
+                    var k = gunLength / (Math.sqrt(1 + Math.pow(slope, 2)));
+                    var gunX;
+                    var gunY;
+                    if (player.mouse.x < player.x) {
+                        gunX = player.x - k;
+                        gunY = (player.y - (k * slope));
+                    } else {
+                        gunX = player.x + k;
+                        gunY = player.y + (k * slope);
+                    }
+
+                    var gun = new Line(player.x, player.y, gunX, gunY, {
+                        type: 'gun',
+                        color: 'black'
+                    });
+                    entities[gun.id] = gun;
+                    gunMap[ws.playerId] = gun;
+                }
+            },
+            kills: 0,
+            deaths: 0
         });
         entities[player.id] = player;
         playerMap[player.id] = player;
         ws.playerId = player.id;
         return player;
-    };
-
-    var fireGun = function (x, y, ws) {
-        var player = playerMap[ws.playerId];
-        if (player && player.ammo > 0 && player.reloading === false && !player.isDead) {
-            player.ammo -= 1;
-            var speed = 10;
-            var dist = Math.sqrt(Math.pow((x - player.x), 2) + Math.pow((y - player.y), 2));
-            var vx = ((x - player.x) / dist) * speed;
-            var vy = ((y - player.y) / dist) * speed;
-
-            var bullet = new Circle(player.x, player.y, 2, {
-                type: 'bullet',
-                playerId: player.id,
-                color: 'black',
-                beforeUpdate: function () {
-                    if (!this.timeAlive) {
-                        this.timeAlive = 0;
-                    }
-                    if (this.timeAlive >= 100) {
-                        delete entities[this.id];
-                    } else {
-                        this.timeAlive = this.timeAlive + 1;
-                        this.x = this.x + vx;
-                        this.y = this.y + vy;
-                    }
-                },
-                onCollision: function (collidedObj) {
-                    if (collidedObj.id !== this.playerId) {
-                        this.color = 'orange';
-                        this.isDead = true;
-                        delete entities[this.id];
-                    }
-                },
-                isDead: false
-            });
-            entities[bullet.id] = bullet;
-        }
     };
 
     var updateEntities = function (dt) {
@@ -377,8 +398,8 @@
         handleMessage: function (message, ws) {
             var msgObj = JSON.parse(message);
             if (msgObj.type === 'event') {
-                if (msgObj.event === 'click') {
-                    fireGun(msgObj.x, msgObj.y, ws);
+                if (msgObj.event === 'click' && playerMap[ws.playerId] !== undefined) {
+                    playerMap[ws.playerId].fireGun(msgObj.x, msgObj.y);
                 } else if (msgObj.event === 'keyup' && playerMap[ws.playerId] !== undefined) {
                     playerMap[ws.playerId].dObj[msgObj.direction] = false;
                     if (msgObj.x && msgObj.y) {
@@ -402,13 +423,15 @@
                             y: msgObj.y
                         };
                     }
-                    manageGun(ws);
+                    playerMap[ws.playerId].manageGun();
                 }
             } else if (msgObj.type === 'action') {
                 if (msgObj.action === 'reload' && playerMap[ws.playerId] !== undefined) {
                     playerMap[ws.playerId].reload();
-                } else if (msgObj.action === 'stopPlayer') {
+                } else if (msgObj.action === 'stopPlayer' && playerMap[ws.playerId] !== undefined) {
                     playerMap[ws.playerId].stopMoving();
+                } else if (msgObj.action === 'respawn' && playerMap[ws.playerId] !== undefined) {
+                    playerMap[ws.playerId].respawn();
                 }
             }
         },
@@ -419,7 +442,9 @@
         },
         onPlayerDisconnect: function (ws) {
             console.log('player disconnected: ' + ws.playerId);
-            delete entities[gunMap[ws.playerId].id];
+            if (gunMap[ws.playerId]) {
+                delete entities[gunMap[ws.playerId].id];
+            }
             delete entities[ws.playerId];
             delete gunMap[ws.playerId];
             delete playerMap[ws.playerId];

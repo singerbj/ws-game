@@ -122,6 +122,11 @@
                         type: 'action',
                         action: 'reload'
                     });
+                } else if (code === 32) {
+                    send({
+                        type: 'action',
+                        action: 'respawn'
+                    });
                 } else {
                     e.preventDefault();
                     e.stopImmediatePropagation();
@@ -168,7 +173,7 @@
                 var e;
                 for (e in entities) {
                     if (entities[e] !== null) {
-                        if (entities[e].shape === 'circle') {
+                        if (entities[e].shape === 'circle' && !entities[e].isDead) {
                             ctx.beginPath();
                             ctx.arc(entities[e].x, entities[e].y, entities[e].r, 0, 2 * Math.PI, false);
                             if (typeof entities[e].color === 'string') {
@@ -209,6 +214,21 @@
                     } else if (player.ammo === 0) {
                         ctx.strokeText('Press R to reload!', 120.5, 30.5);
                         ctx.fillText('Press R to reload!', 120.5, 30.5);
+                    }
+
+                    console.log(player.kills, player.deaths);
+                    ctx.strokeText('Kills: ' + player.kills, 10.5, 60.5);
+                    ctx.fillText('Kills: ' + player.kills, 10.5, 60.5);
+                    ctx.strokeText('Deaths: ' + player.deaths, 10.5, 90.5);
+                    ctx.fillText('Deaths: ' + player.deaths, 10.5, 90.5);
+                    ctx.strokeText('Health: ' + player.healthPercentage + '%', 10.5, 120.5);
+                    ctx.fillText('Health: ' + player.healthPercentage + '%', 10.5, 120.5);
+
+                    if (player.isDead) {
+                        ctx.strokeText('Press Spacebar to respawn!', 10.5, 150.5);
+                        ctx.fillText('Press Spacebar to respawn!', 10.5, 150.5);
+                    } else {
+                        //show health
                     }
                 }
 
