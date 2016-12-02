@@ -437,7 +437,7 @@
         },
         onPlayerConnect: function (ws) {
             addNewPlayer(ws);
-            console.log('player added: ' + ws.playerId);
+            console.log('player connected: ' + ws.playerId);
 
         },
         onPlayerDisconnect: function (ws) {
