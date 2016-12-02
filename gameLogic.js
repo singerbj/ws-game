@@ -129,7 +129,7 @@
     }
     setInterval(function () {
         createAndAddThing();
-    }, 500);
+    }, 1000);
 
     var manageGun = function (ws) {
         var player = playerMap[ws.playerId];
@@ -217,12 +217,20 @@
             mouse: {
                 x: canvasWidth / 2,
                 y: canvasHeight / 2
+            },
+            stopMoving: function () {
+                this.dObj = {
+                    up: false,
+                    down: false,
+                    left: false,
+                    right: false
+                };
             }
         });
         entities[player.id] = player;
         playerMap[player.id] = player;
         ws.playerId = player.id;
-        console.log('player added: ' + ws.playerId, player.color);
+        return player;
     };
 
     var fireGun = function (x, y, ws) {
@@ -399,13 +407,18 @@
             } else if (msgObj.type === 'action') {
                 if (msgObj.action === 'reload' && playerMap[ws.playerId] !== undefined) {
                     playerMap[ws.playerId].reload();
+                } else if (msgObj.action === 'stopPlayer') {
+                    playerMap[ws.playerId].stopMoving();
                 }
             }
         },
         onPlayerConnect: function (ws) {
             addNewPlayer(ws);
+            console.log('player added: ' + ws.playerId);
+
         },
         onPlayerDisconnect: function (ws) {
+            console.log('player disconnected: ' + ws.playerId);
             delete entities[gunMap[ws.playerId].id];
             delete entities[ws.playerId];
             delete gunMap[ws.playerId];

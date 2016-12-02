@@ -93,13 +93,19 @@
                 var rect = ctx.canvas.getBoundingClientRect();
                 mouseX = e.clientX - rect.left;
                 mouseY = e.clientY - rect.top;
-
                 send({
                     type: 'event',
                     event: 'mousemove',
                     x: mouseX,
                     y: mouseY
                 });
+
+                if (mouseX < rect.left || mouseX > rect.width || mouseY < rect.top || mouseY > rect.height) {
+                    send({
+                        type: 'action',
+                        action: 'stopPlayer'
+                    });
+                }
             });
 
             canvas.contextmenu(function (e) {
@@ -109,6 +115,7 @@
             });
 
             window.addEventListener('keydown', function (e) {
+                var rect = ctx.canvas.getBoundingClientRect();
                 var code = e.keyCode;
                 if (code === 82) {
                     send({
@@ -119,7 +126,7 @@
                     e.preventDefault();
                     e.stopImmediatePropagation();
                     var checkCode = function (a, b, direction) {
-                        if (code === a || code === b) {
+                        if ((code === a || code === b) && !(mouseX < rect.left || mouseX > rect.width || mouseY < rect.top || mouseY > rect.height)) {
                             send({
                                 type: 'event',
                                 event: 'keydown',
@@ -192,21 +199,17 @@
 
                 if (player) {
                     ctx.font = "18px serif";
+                    ctx.strokeStyle = 'white';
                     ctx.fillStyle = 'black';
+                    ctx.strokeText('Ammo: ' + player.ammo + '/' + player.maxAmmo, 10.5, 30.5);
                     ctx.fillText('Ammo: ' + player.ammo + '/' + player.maxAmmo, 10.5, 30.5);
                     if (player.reloadPercentage) {
+                        ctx.strokeText(player.reloadPercentage + '% reloaded...', 120.5, 30.5);
                         ctx.fillText(player.reloadPercentage + '% reloaded...', 120.5, 30.5);
                     } else if (player.ammo === 0) {
+                        ctx.strokeText('Press R to reload!', 120.5, 30.5);
                         ctx.fillText('Press R to reload!', 120.5, 30.5);
                     }
-
-                    //create gun line on player
-                    //     ctx.beginPath();
-                    //     ctx.moveTo(player.x, player.y);
-                    //     ctx.lineTo(mouseX, mouseY);
-                    //     ctx.lineWidth = 3;
-                    //     ctx.strokeStyle = 'black';
-                    //     ctx.stroke();
                 }
 
                 window.requestAnimationFrame(draw);
