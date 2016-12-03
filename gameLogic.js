@@ -305,8 +305,8 @@
                                         delete gunMap[collidedObj.id];
                                         player.kills += 1;
                                     }
+                                    delete entities[this.id];
                                 }
-                                delete entities[this.id];
                             }
                         }
                     });
