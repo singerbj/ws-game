@@ -1,6 +1,6 @@
 /*global console, setInterval, module*/
 
-(function () {
+(function() {
     'use strict';
 
     var clients;
@@ -9,7 +9,7 @@
     var canvasWidth = 1920;
     var canvasHeight = 1080;
 
-    var getCenterAndRadius = function (s) {
+    var getCenterAndRadius = function(s) {
         if (s) {
             var r = {};
             r.x = s.x;
@@ -19,7 +19,7 @@
         }
     };
 
-    var collisionCheck = function (s1, s2) {
+    var collisionCheck = function(s1, s2) {
         try {
             if (s1 && s2 && s1.shape !== 'line' && s2.shape !== 'line') {
                 var crS1 = getCenterAndRadius(s1);
@@ -41,7 +41,7 @@
     };
 
     var uuidV4 = require('uuid/v4');
-    var Circle = function (x, y, r, options) {
+    var Circle = function(x, y, r, options) {
         var circle = {
             id: uuidV4(),
             shape: "circle",
@@ -61,7 +61,27 @@
         return circle;
     };
 
-    var Line = function (x1, y1, x2, y2, options) {
+    // var Rectangle = function(x, y, w, h, options) {
+    //     var rectangle = {
+    //         id: uuidV4(),
+    //         shape: "rectangle",
+    //         x: x,
+    //         w: w,
+    //         h: h,
+    //         color: 'black'
+    //     };
+
+    //     var key;
+    //     for (key in options) {
+    //         if (options[key] !== undefined) {
+    //             rectangle[key] = options[key];
+    //         }
+    //     }
+
+    //     return rectangle;
+    // };
+
+    var Line = function(x1, y1, x2, y2, options) {
         var line = {
             id: uuidV4(),
             shape: "line",
@@ -82,13 +102,13 @@
         return line;
     };
 
-    var rand = function (min, max) {
+    var rand = function(min, max) {
         return Math.floor(Math.random() * (max - min)) + min;
     };
 
     var entities = {};
 
-    var createAndAddThing = function () {
+    var createAndAddThing = function() {
         var negativeX = [1, -1][Math.round(Math.random())];
         var negativeY = [1, -1][Math.round(Math.random())];
         var newX = Math.random(0, 20);
@@ -102,7 +122,8 @@
         var height = r * 2;
         var thing = new Circle(x, y, r, {
             color: 'blue',
-            beforeUpdate: function () {
+            type: 'thing',
+            beforeUpdate: function() {
                 this.color = 'blue';
                 this.x += vx;
                 this.y += vy;
@@ -110,7 +131,7 @@
                     delete entities[this.id];
                 }
             },
-            onCollision: function (collidedObj) {
+            onCollision: function(collidedObj) {
                 this.color = 'purple';
                 if (collidedObj.type === 'bullet' && collidedObj.playerId !== this.id) {
                     this.isDead = true;
@@ -124,16 +145,16 @@
 
     //create some shapes to shoot every 2 seconds
     var i;
-    for (i = 0; i < 5; i += 1) {
+    for (i = 0; i < 15; i += 1) {
         createAndAddThing();
     }
-    setInterval(function () {
-        createAndAddThing();
-    }, 1000);
+    // setInterval(function() {
+    //     createAndAddThing();
+    // }, 1000);
 
 
 
-    var addNewPlayer = function (ws) {
+    var addNewPlayer = function(ws) {
         //var player = new Circle(rand(0, canvasWidth), rand(0, canvasHeight), 10, {
         var player = new Circle(rand(0, 300), rand(0, 300), 10, {
             type: 'player',
@@ -143,7 +164,7 @@
                 b: rand(100, 200),
                 a: 1
             },
-            beforeUpdate: function () {
+            beforeUpdate: function() {
                 this.healthPercentage = Math.floor((this.health / this.maxHealth) * 100);
                 if (this.timeToReload && Date.now() >= this.timeToReload) {
                     this.reloading = false;
@@ -158,7 +179,43 @@
                 }
                 this.manageGun();
             },
-            onCollision: function (collidedObj) {},
+            onCollision: function(collidedObj) {
+                // if (collidedObj.x > this.x) {
+                //     this.x += 1.1;
+                // } else {
+                //     this.x -= 1.1;
+                // }
+                // if (collidedObj.y > this.y) {
+                //     this.y -= 1.1;
+                // } else {
+                //     this.y += 1.1;
+                // }
+
+                // var cObj = collidedObj;
+                // if (cObj.shape === 'circle' && cObj.type !== 'bullet') {
+                //     var slope = (cObj.y - this.y) / (cObj.x - this.x);
+                //     var k = ((cObj.r + this.r) / 4) / (Math.sqrt(1 + Math.pow(slope, 2)));
+                //     k = Math.ceil(k);
+                //
+                //     console.log(cObj.r, this.r, cObj.r + this.r, Math.ceil(Math.sqrt(Math.pow(k, 2) + Math.pow(slope * k, 2))));
+                //     var newX;
+                //     var newY;
+                //     if (cObj.x < this.x) {
+                //         newX = Math.ceil(this.x + k);
+                //     } else {
+                //         newX = Math.ceil(this.x - k);
+                //     }
+                //     if (cObj.y < this.y) {
+                //         newY = Math.ceil(this.y - (k * slope));
+                //     } else {
+                //         newY = Math.ceil(this.y + (k * slope));
+                //
+                //     }
+                //     // console.log(newX, newY);
+                //     this.x = newX;
+                //     this.y = newY;
+                // }
+            },
             acc: {
                 left: 0,
                 up: 0,
@@ -178,7 +235,7 @@
             reloadTime: 1250,
             reloading: false,
             isDead: false,
-            reload: function () {
+            reload: function() {
                 if (!this.isDead && this.reloading === false && this.ammo < 5) {
                     this.reloading = true;
                 }
@@ -187,7 +244,7 @@
                 x: canvasWidth / 2,
                 y: canvasHeight / 2
             },
-            stopMoving: function () {
+            stopMoving: function() {
                 this.dObj = {
                     up: false,
                     down: false,
@@ -195,7 +252,7 @@
                     right: false
                 };
             },
-            respawn: function () {
+            respawn: function() {
                 if (this.isDead) {
                     this.x = rand(0, canvasWidth);
                     this.y = rand(0, canvasHeight);
@@ -207,7 +264,7 @@
                     this.isDead = false;
                 }
             },
-            fireGun: function (x, y, ws) {
+            fireGun: function(x, y, ws) {
                 var player = this;
                 if (player.ammo > 0 && player.reloading === false && !player.isDead) {
                     player.ammo -= 1;
@@ -221,7 +278,7 @@
                         playerId: player.id,
                         color: 'black',
                         damage: 400,
-                        beforeUpdate: function () {
+                        beforeUpdate: function() {
                             if (!this.timeAlive) {
                                 this.timeAlive = 0;
                             }
@@ -233,19 +290,21 @@
                                 this.y = this.y + vy;
                             }
                         },
-                        onCollision: function (collidedObj) {
-                            if (collidedObj && collidedObj.type === 'player' && collidedObj.id !== this.playerId && !collidedObj.isDead) {
-                                if (collidedObj.health > 0 && (collidedObj.health - this.damage) > 0) {
-                                    collidedObj.health = collidedObj.health - this.damage;
-                                } else {
-                                    collidedObj.health = 0;
-                                    collidedObj.isDead = true;
-                                    collidedObj.deaths += 1;
-                                    if (gunMap[collidedObj.id]) {
-                                        delete entities[gunMap[collidedObj.id].id];
+                        onCollision: function(collidedObj) {
+                            if (collidedObj.id !== this.playerId && collidedObj.shape !== 'line') {
+                                if (collidedObj && collidedObj.type === 'player' && !collidedObj.isDead) {
+                                    if (collidedObj.health > 0 && (collidedObj.health - this.damage) > 0) {
+                                        collidedObj.health = collidedObj.health - this.damage;
+                                    } else {
+                                        collidedObj.health = 0;
+                                        collidedObj.isDead = true;
+                                        collidedObj.deaths += 1;
+                                        if (gunMap[collidedObj.id]) {
+                                            delete entities[gunMap[collidedObj.id].id];
+                                        }
+                                        delete gunMap[collidedObj.id];
+                                        player.kills += 1;
                                     }
-                                    delete gunMap[collidedObj.id];
-                                    player.kills += 1;
                                 }
                                 delete entities[this.id];
                             }
@@ -254,7 +313,7 @@
                     entities[bullet.id] = bullet;
                 }
             },
-            manageGun: function () {
+            manageGun: function() {
                 var player = playerMap[ws.playerId];
                 if (gunMap[ws.playerId]) {
                     var lastGunId = gunMap[ws.playerId].id;
@@ -284,7 +343,8 @@
                 }
             },
             kills: 0,
-            deaths: 0
+            deaths: 0,
+            pps: 4
         });
         entities[player.id] = player;
         playerMap[player.id] = player;
@@ -292,8 +352,8 @@
         return player;
     };
 
-    var updateEntities = function (dt) {
-        var adjustAcc = function (key, val, player) {
+    var updateEntities = function(dt) {
+        var adjustAcc = function(key, val, player) {
             if (player.dObj[key]) {
                 if (player.acc[key] <= 30) {
                     player.acc[key] += val;
@@ -310,23 +370,22 @@
         };
 
         var playerId, player;
-        var pps = 4;
 
         for (playerId in playerMap) {
             if (playerMap[playerId] !== undefined) {
                 player = playerMap[playerId];
-                adjustAcc('left', 3, player);
-                adjustAcc('up', 3, player);
-                adjustAcc('right', 3, player);
-                adjustAcc('down', 3, player);
+                adjustAcc('left', player.pps, player);
+                adjustAcc('up', player.pps, player);
+                adjustAcc('right', player.pps, player);
+                adjustAcc('down', player.pps, player);
 
-                player.x -= (pps * (player.acc.left - player.acc.right) * dt);
-                player.y -= (pps * (player.acc.up - player.acc.down) * dt);
+                player.x -= (player.pps * (player.acc.left - player.acc.right) * dt);
+                player.y -= (player.pps * (player.acc.up - player.acc.down) * dt);
             }
         }
     };
 
-    var update = function (dt) {
+    var update = function(dt) {
         //checkCollisions
         var e;
         for (e in entities) {
@@ -359,9 +418,9 @@
         }
     };
 
-    var render = function () {
+    var render = function() {
         if (clients && clients.length > 0) {
-            clients.forEach(function (ws) {
+            clients.forEach(function(ws) {
                 if (ws.readyState === 1) {
                     ws.send(JSON.stringify({
                         player: playerMap[ws.playerId],
@@ -376,7 +435,7 @@
     //game loop
     var raf = require('raf');
     var lastTime;
-    var draw = function () {
+    var draw = function() {
         //update time
         var now = Date.now();
         if (lastTime) {
@@ -390,12 +449,12 @@
 
     module.exports = {
         started: false,
-        startGame: function (wssClients) {
+        startGame: function(wssClients) {
             clients = wssClients;
             this.started = true;
             draw();
         },
-        handleMessage: function (message, ws) {
+        handleMessage: function(message, ws) {
             var msgObj = JSON.parse(message);
             if (msgObj.type === 'event') {
                 if (msgObj.event === 'click' && playerMap[ws.playerId] !== undefined) {
@@ -435,12 +494,12 @@
                 }
             }
         },
-        onPlayerConnect: function (ws) {
+        onPlayerConnect: function(ws) {
             addNewPlayer(ws);
             console.log('player connected: ' + ws.playerId);
 
         },
-        onPlayerDisconnect: function (ws) {
+        onPlayerDisconnect: function(ws) {
             console.log('player disconnected: ' + ws.playerId);
             if (gunMap[ws.playerId]) {
                 delete entities[gunMap[ws.playerId].id];
