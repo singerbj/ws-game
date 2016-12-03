@@ -148,9 +148,9 @@
     for (i = 0; i < 15; i += 1) {
         createAndAddThing();
     }
-    // setInterval(function() {
-    //     createAndAddThing();
-    // }, 1000);
+    setInterval(function() {
+        createAndAddThing();
+    }, 1000);
 
 
 
