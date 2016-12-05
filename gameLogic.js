@@ -22,7 +22,7 @@
     var collisionCheck = function (s1, s2) {
         var maxSize = 200; //object widths will never be bigger than this / 2
         try {
-            if ((Math.sqrt((s1.x - s2.x) * (s1.x - s2.x) + (s1.y - s2.y) * (s1.y - s2.y))) < maxSize) {
+            if (s1 && s2 && (Math.sqrt((s1.x - s2.x) * (s1.x - s2.x) + (s1.y - s2.y) * (s1.y - s2.y))) < maxSize) {
                 var dx, dy;
                 if (s1.shape === 'circle' && s2.shape === 'circle') {
                     if (s1 && s2 && s1.shape !== 'line' && s2.shape !== 'line') {
