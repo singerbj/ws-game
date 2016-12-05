@@ -70,10 +70,10 @@
                     dy = distY - rectangle.h / 2;
                     return (dx * dx + dy * dy <= (circle.r * circle.r));
                 } else if (s1.shape === 'rectangle' && s2.shape === 'rectangle') {
-                    if (s1.x < s2.x + s2.width &&
-                        s1.x + s1.width > s2.x &&
-                        s1.y < s2.y + s2.height &&
-                        s1.height + s1.y > s2.y) {
+                    if (s1.x < (s2.x + s2.w) &&
+                        (s1.x + s1.w) > s2.x &&
+                        s1.y < (s2.y + s2.h) &&
+                        (s1.h + s1.y) > s2.y) {
                         return true;
                     }
                 }
@@ -105,26 +105,26 @@
         return circle;
     };
 
-    // var Rectangle = function (x, y, w, h, options) {
-    //     var rectangle = {
-    //         id: uuidV4(),
-    //         shape: "rectangle",
-    //         x: x,
-    //         y: y,
-    //         w: w,
-    //         h: h,
-    //         color: 'black'
-    //     };
+    var Rectangle = function (x, y, w, h, options) {
+        var rectangle = {
+            id: uuidV4(),
+            shape: "rectangle",
+            x: x,
+            y: y,
+            w: w,
+            h: h,
+            color: 'black'
+        };
 
-    //     var key;
-    //     for (key in options) {
-    //         if (options[key] !== undefined) {
-    //             rectangle[key] = options[key];
-    //         }
-    //     }
+        var key;
+        for (key in options) {
+            if (options[key] !== undefined) {
+                rectangle[key] = options[key];
+            }
+        }
 
-    //     return rectangle;
-    // };
+        return rectangle;
+    };
 
     var Line = function (x1, y1, x2, y2, options) {
         var line = {
@@ -182,10 +182,6 @@
             },
             onCollision: function (collidedObj) {
                 this.color = 'purple';
-                // if (collidedObj && collidedObj.type === 'bullet' && collidedObj.playerId !== this.id) {
-                //     this.isDead = true;
-                //     delete entities[this.id];
-                // }
             },
             isDead: false
         });
@@ -203,8 +199,8 @@
 
 
     var addNewPlayer = function (ws) {
-        //var player = new Circle(rand(0, canvasWidth), rand(0, canvasHeight), 10, {
         var player = new Circle(rand(0, 300), rand(0, 300), 10, {
+            // var player = new Rectangle(rand(0, 300), rand(0, 300), 10, 10, {
             type: 'player',
             color: {
                 r: rand(100, 200),
@@ -280,12 +276,12 @@
                 var player = this;
                 if (player.ammo > 0 && player.reloading === false && !player.isDead) {
                     player.ammo -= 1;
-                    var speed = 10;
+                    var speed = 12;
                     var dist = Math.sqrt(Math.pow((x - player.x), 2) + Math.pow((y - player.y), 2));
                     var vx = ((x - player.x) / dist) * speed;
                     var vy = ((y - player.y) / dist) * speed;
 
-                    var bullet = new Circle(player.x, player.y, 2, {
+                    var bullet = new Circle(player.x, player.y, 1.5, {
                         type: 'bullet',
                         playerId: player.id,
                         color: 'black',

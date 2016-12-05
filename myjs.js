@@ -97,7 +97,7 @@
                 }
             };
 
-            canvas.click(function (e) {
+            canvas.mousedown(function (e) {
                 var rect = ctx.canvas.getBoundingClientRect();
                 mouseX = e.clientX - rect.left;
                 mouseY = e.clientY - rect.top;
@@ -108,6 +108,9 @@
                     x: mouseX,
                     y: mouseY
                 });
+            });
+            canvas.mousedown(function (e) {
+                console.log('mouseup');
             });
 
             body.mousemove(function (e) {
