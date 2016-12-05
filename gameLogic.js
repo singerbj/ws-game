@@ -30,14 +30,14 @@
                     var distance = Math.sqrt((dx * dx) + (dy * dy));
 
                     if (distance <= (crS1.r + crS2.r)) {
-                        s1.onCollision(s2);
-                        s2.onCollision(s1);
+                        return true;
                     }
                 }
             }
         } catch (e) {
             console.log(e.message);
         }
+        return false;
     };
 
     var uuidV4 = require('uuid/v4');
@@ -291,7 +291,7 @@
                             }
                         },
                         onCollision: function(collidedObj) {
-                            if (collidedObj.id !== this.playerId && collidedObj.shape !== 'line') {
+                            if (collidedObj && collidedObj.id !== this.playerId && collidedObj.shape !== 'line') {
                                 if (collidedObj && collidedObj.type === 'player' && !collidedObj.isDead) {
                                     if (collidedObj.health > 0 && (collidedObj.health - this.damage) > 0) {
                                         collidedObj.health = collidedObj.health - this.damage;
@@ -344,7 +344,79 @@
             },
             kills: 0,
             deaths: 0,
-            pps: 4
+            pps: 4,
+            adjustAcc: function(key, val) {
+                if (this.dObj[key]) {
+                    if (this.acc[key] <= 30) {
+                        this.acc[key] += val;
+                    }
+                } else {
+                    if (this.acc[key] > 0) {
+                        if (this.acc[key] >= val) {
+                            this.acc[key] -= val;
+                        } else {
+                            this.acc[key] = 0;
+                        }
+                    }
+                }
+            },
+            updatePosition: function(dt){
+                this.adjustAcc('left', this.pps);
+                this.adjustAcc('up', this.pps);
+                this.adjustAcc('right', this.pps);
+                this.adjustAcc('down', this.pps);
+
+                var tempX = Math.floor(this.x - (this.pps * (this.acc.left - this.acc.right) * dt));
+                var tempY = Math.floor(this.y - (this.pps * (this.acc.up - this.acc.down) * dt));
+
+                var e1, tempCircle;
+                for (e1 in entities) {
+                    if (entities[e1] !== undefined) {
+                        if (entities[e1] !== this && entities[e1].playerId !== this.id){
+                            tempCircle = new Circle(tempX, tempY, 10);
+                            while(collisionCheck(entities[e1], tempCircle) === true){
+                                if(tempX !== Math.floor(this.x)){
+                                    if(tempX > Math.floor(this.x)){
+                                        tempX -= 1;
+                                    }else{
+                                        tempX += 1;
+                                    }
+                                    this.acc.left = 0;
+                                    this.acc.right = 0;
+                                }
+                                if(tempY !== Math.floor(this.y)){
+                                    if(tempY > Math.floor(this.y)){
+                                        tempY -= 1;
+                                    }else{
+                                        tempY += 1;
+                                    }
+                                    this.acc.up = 0;
+                                    this.acc.down = 0;
+                                }
+                                if(tempX === Math.floor(this.x) && tempY === Math.floor(this.y)){
+                                    if(entities[e1].x > tempX){
+                                        tempX -= 1;
+                                    }else{
+                                        tempX += 1;
+                                    }
+                                    this.x = tempX;
+                                    if(entities[e1].y > tempY){
+                                        tempY -= 1;
+                                    }else{
+                                        tempY += 1;
+                                    }
+                                    this.y = tempY;
+                                }
+                                tempCircle = new Circle(tempX, tempY, 10);
+                            }
+                        }
+                    }
+                }
+
+                this.x = tempX;
+                this.y = tempY;
+
+            }
         });
         entities[player.id] = player;
         playerMap[player.id] = player;
@@ -352,41 +424,8 @@
         return player;
     };
 
-    var updateEntities = function(dt) {
-        var adjustAcc = function(key, val, player) {
-            if (player.dObj[key]) {
-                if (player.acc[key] <= 30) {
-                    player.acc[key] += val;
-                }
-            } else {
-                if (player.acc[key] > 0) {
-                    if (player.acc[key] >= val) {
-                        player.acc[key] -= val;
-                    } else {
-                        player.acc[key] = 0;
-                    }
-                }
-            }
-        };
-
-        var playerId, player;
-
-        for (playerId in playerMap) {
-            if (playerMap[playerId] !== undefined) {
-                player = playerMap[playerId];
-                adjustAcc('left', player.pps, player);
-                adjustAcc('up', player.pps, player);
-                adjustAcc('right', player.pps, player);
-                adjustAcc('down', player.pps, player);
-
-                player.x -= (player.pps * (player.acc.left - player.acc.right) * dt);
-                player.y -= (player.pps * (player.acc.up - player.acc.down) * dt);
-            }
-        }
-    };
-
     var update = function(dt) {
-        //checkCollisions
+        //runPreUpdateStuff
         var e;
         for (e in entities) {
             if (entities[e] !== undefined) {
@@ -395,20 +434,31 @@
                 }
             }
         }
-        updateEntities(dt);
-        //checkCollisions
+        //update the player's position
+        var playerId, player;
+        for (playerId in playerMap) {
+            if (playerMap[playerId] !== undefined) {
+                player = playerMap[playerId];
+                player.updatePosition(dt);
+            }
+        }
+        //checkCollisions for non players
         var e1, e2;
         for (e1 in entities) {
             if (entities[e1] !== undefined) {
                 for (e2 in entities) {
                     if (entities[e2] !== undefined) {
-                        if (e1 !== e2) {
-                            collisionCheck(entities[e1], entities[e2]);
+                        if (e1 !== e2 && e1.type !== 'player' && e2.type !== 'player') {
+                            if(collisionCheck(entities[e1], entities[e2]) === true){
+                                entities[e1].onCollision(entities[e2]);
+                                entities[e2].onCollision(entities[e1]);
+                            }
                         }
                     }
                 }
             }
         }
+        //run post update stuff
         for (e in entities) {
             if (entities[e] !== undefined) {
                 if (entities[e].afterUpdate) {
