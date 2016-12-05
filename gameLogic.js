@@ -69,6 +69,13 @@
                     dx = distX - rectangle.w / 2;
                     dy = distY - rectangle.h / 2;
                     return (dx * dx + dy * dy <= (circle.r * circle.r));
+                } else if (s1.shape === 'rectangle' && s2.shape === 'rectangle') {
+                    if (s1.x < s2.x + s2.width &&
+                        s1.x + s1.width > s2.x &&
+                        s1.y < s2.y + s2.height &&
+                        s1.height + s1.y > s2.y) {
+                        return true;
+                    }
                 }
             }
         } catch (e) {
