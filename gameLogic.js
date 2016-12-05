@@ -20,18 +20,55 @@
     };
 
     var collisionCheck = function (s1, s2) {
+        var maxSize = 200; //object widths will never be bigger than this / 2
         try {
-            if (s1 && s2 && s1.shape !== 'line' && s2.shape !== 'line') {
-                var crS1 = getCenterAndRadius(s1);
-                var crS2 = getCenterAndRadius(s2);
-                if (crS1 && crS2) {
-                    var dx = crS1.x > crS2.x ? crS1.x - crS2.x : crS2.x - crS1.x;
-                    var dy = crS1.y > crS2.y ? crS1.y - crS2.y : crS2.y - crS1.y;
-                    var distance = Math.sqrt((dx * dx) + (dy * dy));
+            if ((Math.sqrt((s1.x - s2.x) * (s1.x - s2.x) + (s1.y - s2.y) * (s1.y - s2.y))) < maxSize) {
+                var dx, dy;
+                if (s1.shape === 'circle' && s2.shape === 'circle') {
+                    if (s1 && s2 && s1.shape !== 'line' && s2.shape !== 'line') {
+                        var crS1 = getCenterAndRadius(s1);
+                        var crS2 = getCenterAndRadius(s2);
+                        if (crS1 && crS2) {
+                            dx = crS1.x > crS2.x ? crS1.x - crS2.x : crS2.x - crS1.x;
+                            dy = crS1.y > crS2.y ? crS1.y - crS2.y : crS2.y - crS1.y;
+                            var distance = Math.sqrt((dx * dx) + (dy * dy));
 
-                    if (distance <= (crS1.r + crS2.r)) {
+                            if (distance <= (crS1.r + crS2.r)) {
+                                return true;
+                            }
+                        }
+                    }
+                } else if ((s1.shape === 'circle' && s2.shape === 'rectangle') || (s1.shape === 'rectangle' && s2.shape === 'circle')) {
+                    var circle, rectangle;
+                    if (s1.type === 'circle') {
+                        circle = s1;
+                        rectangle = s2;
+                    } else {
+                        circle = s2;
+                        rectangle = s1;
+                    }
+
+                    var distX = Math.abs(circle.x - rectangle.x - rectangle.w / 2);
+                    var distY = Math.abs(circle.y - rectangle.y - rectangle.h / 2);
+
+                    if (distX > (rectangle.w / 2 + circle.r)) {
+                        return false;
+                    }
+                    if (distY > (rectangle.h / 2 + circle.r)) {
+                        return false;
+                    }
+
+
+                    if (distX <= (rectangle.w / 2)) {
                         return true;
                     }
+                    if (distY <= (rectangle.h / 2)) {
+                        return true;
+                    }
+
+                    dx = distX - rectangle.w / 2;
+                    dy = distY - rectangle.h / 2;
+                    return (dx * dx + dy * dy <= (circle.r * circle.r));
                 }
             }
         } catch (e) {
@@ -61,11 +98,12 @@
         return circle;
     };
 
-    // var Rectangle = function(x, y, w, h, options) {
+    // var Rectangle = function (x, y, w, h, options) {
     //     var rectangle = {
     //         id: uuidV4(),
     //         shape: "rectangle",
     //         x: x,
+    //         y: y,
     //         w: w,
     //         h: h,
     //         color: 'black'
@@ -120,7 +158,11 @@
         var r = rand(10, 40);
         var width = r * 2;
         var height = r * 2;
+        // var width = rand(10, 100);
+        // var height = rand(10, 100);
+
         var thing = new Circle(x, y, r, {
+            // var thing = new Rectangle(x, y, width, height, {
             color: 'blue',
             type: 'thing',
             beforeUpdate: function () {
@@ -133,10 +175,10 @@
             },
             onCollision: function (collidedObj) {
                 this.color = 'purple';
-                if (collidedObj.type === 'bullet' && collidedObj.playerId !== this.id) {
-                    this.isDead = true;
-                    delete entities[this.id];
-                }
+                // if (collidedObj && collidedObj.type === 'bullet' && collidedObj.playerId !== this.id) {
+                //     this.isDead = true;
+                //     delete entities[this.id];
+                // }
             },
             isDead: false
         });
@@ -151,7 +193,6 @@
     setInterval(function () {
         createAndAddThing();
     }, 1000);
-
 
 
     var addNewPlayer = function (ws) {
@@ -179,9 +220,7 @@
                 }
                 this.manageGun();
             },
-            onCollision: function (collidedObj) {
-
-            },
+            onCollision: function (collidedObj) {},
             acc: {
                 left: 0,
                 up: 0,
@@ -272,6 +311,12 @@
                                         player.kills += 1;
                                     }
                                     delete entities[this.id];
+
+                                } else if (collidedObj && collidedObj.type === 'thing' && !collidedObj.isDead) {
+                                    collidedObj.isDead = true;
+                                    delete entities[collidedObj.id];
+                                    delete entities[this.id];
+
                                 }
                             }
                         }
@@ -341,13 +386,14 @@
                 var tempX = Math.floor(this.x - (this.pps * (this.acc.left - this.acc.right) * dt));
                 var tempY = Math.floor(this.y - (this.pps * (this.acc.up - this.acc.down) * dt));
 
-                var e1, tempCircle;
+                var e1, tempCircle, e1x, e1y;
                 for (e1 in entities) {
                     if (entities[e1] !== undefined) {
                         if (entities[e1] !== this && entities[e1].playerId !== this.id && (entities[e1].type === 'thing' || entities[e1].type === 'player')) {
                             tempCircle = new Circle(tempX, tempY, 10);
                             while (collisionCheck(entities[e1], tempCircle) === true) {
                                 if (tempX !== Math.floor(this.x)) {
+
                                     if (tempX > Math.floor(this.x)) {
                                         tempX -= 1;
                                     } else {
@@ -366,13 +412,22 @@
                                     this.acc.down = 0;
                                 }
                                 if (tempX === Math.floor(this.x) && tempY === Math.floor(this.y)) {
-                                    if (entities[e1].x > tempX) {
+                                    e1x = Math.floor(entities[e1].x);
+                                    e1y = Math.floor(entities[e1].y);
+
+                                    //if player is colliding with a rectangle, get the center of the rectangle rather than the top left corner
+                                    if (entities[e1].shape === 'rectangle') {
+                                        e1x = Math.floor(e1x + (entities[e1].w / 2));
+                                        e1y = Math.floor(e1y + (entities[e1].h / 2));
+                                    }
+
+                                    if (e1x > tempX) {
                                         tempX -= 1;
                                     } else {
                                         tempX += 1;
                                     }
                                     this.x = tempX;
-                                    if (entities[e1].y > tempY) {
+                                    if (e1y > tempY) {
                                         tempY -= 1;
                                     } else {
                                         tempY += 1;
@@ -422,8 +477,12 @@
                     if (entities[e2] !== undefined) {
                         if (e1 !== e2 && e1.type !== 'player' && e2.type !== 'player') {
                             if (collisionCheck(entities[e1], entities[e2]) === true) {
-                                entities[e1].onCollision(entities[e2]);
-                                entities[e2].onCollision(entities[e1]);
+                                if (entities[e1] && entities[e2]) {
+                                    entities[e1].onCollision(entities[e2]);
+                                }
+                                if (entities[e1] && entities[e2]) {
+                                    entities[e2].onCollision(entities[e1]);
+                                }
                             }
                         }
                     }
