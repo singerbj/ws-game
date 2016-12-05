@@ -180,41 +180,7 @@
                 this.manageGun();
             },
             onCollision: function(collidedObj) {
-                // if (collidedObj.x > this.x) {
-                //     this.x += 1.1;
-                // } else {
-                //     this.x -= 1.1;
-                // }
-                // if (collidedObj.y > this.y) {
-                //     this.y -= 1.1;
-                // } else {
-                //     this.y += 1.1;
-                // }
 
-                // var cObj = collidedObj;
-                // if (cObj.shape === 'circle' && cObj.type !== 'bullet') {
-                //     var slope = (cObj.y - this.y) / (cObj.x - this.x);
-                //     var k = ((cObj.r + this.r) / 4) / (Math.sqrt(1 + Math.pow(slope, 2)));
-                //     k = Math.ceil(k);
-                //
-                //     console.log(cObj.r, this.r, cObj.r + this.r, Math.ceil(Math.sqrt(Math.pow(k, 2) + Math.pow(slope * k, 2))));
-                //     var newX;
-                //     var newY;
-                //     if (cObj.x < this.x) {
-                //         newX = Math.ceil(this.x + k);
-                //     } else {
-                //         newX = Math.ceil(this.x - k);
-                //     }
-                //     if (cObj.y < this.y) {
-                //         newY = Math.ceil(this.y - (k * slope));
-                //     } else {
-                //         newY = Math.ceil(this.y + (k * slope));
-                //
-                //     }
-                //     // console.log(newX, newY);
-                //     this.x = newX;
-                //     this.y = newY;
-                // }
             },
             acc: {
                 left: 0,
@@ -372,7 +338,7 @@
                 var e1, tempCircle;
                 for (e1 in entities) {
                     if (entities[e1] !== undefined) {
-                        if (entities[e1] !== this && entities[e1].playerId !== this.id){
+                        if (entities[e1] !== this && entities[e1].playerId !== this.id && (entities[e1].type === 'thing' || entities[e1].type === 'player')){
                             tempCircle = new Circle(tempX, tempY, 10);
                             while(collisionCheck(entities[e1], tempCircle) === true){
                                 if(tempX !== Math.floor(this.x)){
