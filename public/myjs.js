@@ -344,9 +344,11 @@
                         ctx.fillText('Press Spacebar to respawn!', 10, 100);
                     }
 
-                    ctx.textAlign = "right";
-                    ctx.strokeText(fps + ' fps', canvas.width() - 10, 20);
-                    ctx.fillText(fps + ' fps', canvas.width() - 10, 20);
+                    if (fps) {
+                        ctx.textAlign = "right";
+                        ctx.strokeText(fps + ' fps', canvas.width() - 10, 20);
+                        ctx.fillText(fps + ' fps', canvas.width() - 10, 20);
+                    }
                 }
 
                 window.requestAnimationFrame(draw);
