@@ -3,153 +3,15 @@
 (function () {
     'use strict';
 
+    var Shapes = require('./shapes');
+    var Helpers = require('./helpers');
+    var Collison = require('./collision');
+
     var clients;
     var playerMap = {};
     var gunMap = {};
     var canvasWidth = 1920;
     var canvasHeight = 1080;
-
-    var getCenterAndRadius = function (s) {
-        if (s) {
-            var r = {};
-            r.x = s.x;
-            r.y = s.y;
-            r.r = s.r;
-            return r;
-        }
-    };
-
-    var collisionCheck = function (s1, s2) {
-        var maxSize = 200; //object widths will never be bigger than this / 2
-        try {
-            if (s1 && s2 && (Math.sqrt((s1.x - s2.x) * (s1.x - s2.x) + (s1.y - s2.y) * (s1.y - s2.y))) < maxSize) {
-                var dx, dy;
-                if (s1.shape === 'circle' && s2.shape === 'circle') {
-                    if (s1 && s2 && s1.shape !== 'line' && s2.shape !== 'line') {
-                        var crS1 = getCenterAndRadius(s1);
-                        var crS2 = getCenterAndRadius(s2);
-                        if (crS1 && crS2) {
-                            dx = crS1.x > crS2.x ? crS1.x - crS2.x : crS2.x - crS1.x;
-                            dy = crS1.y > crS2.y ? crS1.y - crS2.y : crS2.y - crS1.y;
-                            var distance = Math.sqrt((dx * dx) + (dy * dy));
-
-                            if (distance <= (crS1.r + crS2.r)) {
-                                return true;
-                            }
-                        }
-                    }
-                } else if ((s1.shape === 'circle' && s2.shape === 'rectangle') || (s1.shape === 'rectangle' && s2.shape === 'circle')) {
-                    var circle, rectangle;
-                    if (s1.type === 'circle') {
-                        circle = s1;
-                        rectangle = s2;
-                    } else {
-                        circle = s2;
-                        rectangle = s1;
-                    }
-
-                    var distX = Math.abs(circle.x - rectangle.x - rectangle.w / 2);
-                    var distY = Math.abs(circle.y - rectangle.y - rectangle.h / 2);
-
-                    if (distX > (rectangle.w / 2 + circle.r)) {
-                        return false;
-                    }
-                    if (distY > (rectangle.h / 2 + circle.r)) {
-                        return false;
-                    }
-
-
-                    if (distX <= (rectangle.w / 2)) {
-                        return true;
-                    }
-                    if (distY <= (rectangle.h / 2)) {
-                        return true;
-                    }
-
-                    dx = distX - rectangle.w / 2;
-                    dy = distY - rectangle.h / 2;
-                    return (dx * dx + dy * dy <= (circle.r * circle.r));
-                } else if (s1.shape === 'rectangle' && s2.shape === 'rectangle') {
-                    if (s1.x < (s2.x + s2.w) &&
-                        (s1.x + s1.w) > s2.x &&
-                        s1.y < (s2.y + s2.h) &&
-                        (s1.h + s1.y) > s2.y) {
-                        return true;
-                    }
-                }
-            }
-        } catch (e) {
-            console.log(e.message);
-        }
-        return false;
-    };
-
-    var uuidV4 = require('uuid/v4');
-    var Circle = function (x, y, r, options) {
-        var circle = {
-            id: uuidV4(),
-            shape: "circle",
-            x: x,
-            y: y,
-            r: r,
-            color: 'black'
-        };
-
-        var key;
-        for (key in options) {
-            if (options[key] !== undefined) {
-                circle[key] = options[key];
-            }
-        }
-
-        return circle;
-    };
-
-    var Rectangle = function (x, y, w, h, options) {
-        var rectangle = {
-            id: uuidV4(),
-            shape: "rectangle",
-            x: x,
-            y: y,
-            w: w,
-            h: h,
-            color: 'black'
-        };
-
-        var key;
-        for (key in options) {
-            if (options[key] !== undefined) {
-                rectangle[key] = options[key];
-            }
-        }
-
-        return rectangle;
-    };
-
-    var Line = function (x1, y1, x2, y2, options) {
-        var line = {
-            id: uuidV4(),
-            shape: "line",
-            x1: x1,
-            y1: y1,
-            x2: x2,
-            y2: y2,
-            color: 'black'
-        };
-
-        var key;
-        for (key in options) {
-            if (options[key] !== undefined) {
-                line[key] = options[key];
-            }
-        }
-
-        return line;
-    };
-
-    var rand = function (min, max) {
-        return Math.floor(Math.random() * (max - min)) + min;
-    };
 
     var entities = {};
 
@@ -160,16 +22,16 @@
         var newY = Math.random(0, 20);
         var vx = negativeX * newX;
         var vy = negativeY * newY;
-        var x = rand(0, 800);
-        var y = rand(0, 600);
-        var r = rand(10, 40);
+        var x = Helpers.rand(0, 800);
+        var y = Helpers.rand(0, 600);
+        var r = Helpers.rand(10, 40);
         var width = r * 2;
         var height = r * 2;
-        // var width = rand(10, 100);
-        // var height = rand(10, 100);
+        // var width = Helpers.rand(10, 100);
+        // var height = Helpers.rand(10, 100);
 
-        var thing = new Circle(x, y, r, {
-            // var thing = new Rectangle(x, y, width, height, {
+        var thing = new Shapes.Circle(x, y, r, {
+            // var thing = new Shapes.Rectangle(x, y, width, height, {
             color: 'blue',
             type: 'thing',
             beforeUpdate: function () {
@@ -199,13 +61,13 @@
 
 
     var addNewPlayer = function (ws) {
-        var player = new Circle(rand(0, 300), rand(0, 300), 10, {
-            // var player = new Rectangle(rand(0, 300), rand(0, 300), 10, 10, {
+        var player = new Shapes.Circle(Helpers.rand(0, 300), Helpers.rand(0, 300), 10, {
+            // var player = new Shapes.Rectangle(Helpers.rand(0, 300), Helpers.rand(0, 300), 10, 10, {
             type: 'player',
             color: {
-                r: rand(100, 200),
-                g: rand(100, 200),
-                b: rand(100, 200),
+                r: Helpers.rand(100, 200),
+                g: Helpers.rand(100, 200),
+                b: Helpers.rand(100, 200),
                 a: 1
             },
             beforeUpdate: function () {
@@ -262,8 +124,8 @@
             },
             respawn: function () {
                 if (this.isDead) {
-                    this.x = rand(0, canvasWidth);
-                    this.y = rand(0, canvasHeight);
+                    this.x = Helpers.rand(0, canvasWidth);
+                    this.y = Helpers.rand(0, canvasHeight);
                     entities[this.id] = this;
                     delete this.timeToReload;
                     delete this.reloadPercentage;
@@ -281,7 +143,7 @@
                     var vx = ((x - player.x) / dist) * speed;
                     var vy = ((y - player.y) / dist) * speed;
 
-                    var bullet = new Circle(player.x, player.y, 1.5, {
+                    var bullet = new Shapes.Circle(player.x, player.y, 1.5, {
                         type: 'bullet',
                         playerId: player.id,
                         color: 'black',
@@ -354,7 +216,7 @@
                         gunY = player.y + gunLength;
                     }
 
-                    var gun = new Line(player.x, player.y, gunX, gunY, {
+                    var gun = new Shapes.Line(player.x, player.y, gunX, gunY, {
                         type: 'gun',
                         color: 'black'
                     });
@@ -393,8 +255,8 @@
                 for (e1 in entities) {
                     if (entities[e1] !== undefined) {
                         if (entities[e1] !== this && entities[e1].playerId !== this.id && (entities[e1].type === 'thing' || entities[e1].type === 'player')) {
-                            tempCircle = new Circle(tempX, tempY, 10);
-                            while (collisionCheck(entities[e1], tempCircle) === true) {
+                            tempCircle = new Shapes.Circle(tempX, tempY, 10);
+                            while (Collison.check(entities[e1], tempCircle) === true) {
                                 if (tempX !== Math.floor(this.x)) {
 
                                     if (tempX > Math.floor(this.x)) {
@@ -437,7 +299,7 @@
                                     }
                                     this.y = tempY;
                                 }
-                                tempCircle = new Circle(tempX, tempY, 10);
+                                tempCircle = new Shapes.Circle(tempX, tempY, 10);
                             }
                         }
                     }
@@ -479,7 +341,7 @@
                 for (e2 in entities) {
                     if (entities[e2] !== undefined) {
                         if (e1 !== e2 && e1.type !== 'player' && e2.type !== 'player') {
-                            if (collisionCheck(entities[e1], entities[e2]) === true) {
+                            if (Collison.check(entities[e1], entities[e2]) === true) {
                                 if (entities[e1] && entities[e2]) {
                                     entities[e1].onCollision(entities[e2]);
                                 }

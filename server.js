@@ -11,7 +11,7 @@
     var Router = require('node-simple-router');
     // var file = require('file');
     var router = new Router();
-    var Game = require('./gameLogic');
+    var Game = require('./server_files/gameLogic');
 
     var d = domain.create();
     d.on('error', function(err) {
@@ -46,7 +46,7 @@
 
 
     router.get("/", function(request, response) {
-        fs.readFile('./index.html', function(err, html) {
+        fs.readFile('./public/index.html', function(err, html) {
             if (err) {
                 throw err;
             }
@@ -63,7 +63,7 @@
 
 
     router.get("/myjs.js", function(request, response) {
-        fs.readFile('./myjs.js', function(err, js) {
+        fs.readFile('./public/myjs.js', function(err, js) {
             if (err) {
                 throw err;
             }
