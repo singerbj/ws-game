@@ -27,8 +27,8 @@
     var createCanvas = function (container) {
         //TODO: fix this
 
-        var width = 1920;
-        var height = 1080;
+        var width = 960;
+        var height = 540;
         var maxWidth = container.width() - 10;
         var maxHeight = container.height() - 10;
 
@@ -37,7 +37,7 @@
             ratio = maxHeight / height;
         }
 
-        var canvas = createHiDPICanvas(width, height, 1.5);
+        var canvas = createHiDPICanvas(width, height, 2);
         container.append(canvas);
         return canvas;
     };
@@ -56,9 +56,11 @@
         // });
         var entities = {};
         var player;
+        var offset;
         var mouseX;
         var mouseY;
         var websocket;
+
 
         var start = function (websocketServerLocation) {
             if (websocket) {
@@ -82,12 +84,53 @@
                 }
             };
 
+            var adjustPlayerForCenteredPlayer= function(){
+                if(!player.adjusted){
+                    var rect = ctx.canvas.getBoundingClientRect();
+                    offset = {
+                        x:  (rect.width / 2) - player.x,
+                        y:  (rect.height / 2) - player.y
+                    };
+
+                    player.oX = player.x;
+                    player.oY = player.y;
+
+                    player.x = (rect.width / 2);
+                    player.y = (rect.height / 2);
+
+                    player.adjusted = true;
+                }
+            };
+
+            var adjustEntityForCenteredPlayer = function(entity){
+                if(!entity.adjusted){
+                    if(entity.x){
+                        entity.x = entity.x + offset.x;
+                        entity.y = entity.y + offset.y;
+                    }else if(entity.x1){
+                        entity.x1 = entity.x1 + offset.x;
+                        entity.y1 = entity.y1 + offset.y;
+                        entity.x2 = entity.x2 + offset.x;
+                        entity.y2 = entity.y2 + offset.y;
+                    }
+                    entity.adjusted = true;
+                }
+            };
+
             var obj;
             websocket.onmessage = function (m) {
                 obj = JSON.parse(m.data);
                 entities = obj.entities;
                 player = obj.player;
                 // console.log('recieved: ', m);
+
+                adjustPlayerForCenteredPlayer();
+                var e;
+                for (e in entities) {
+                    if (entities[e] !== null) {
+                        adjustEntityForCenteredPlayer(entities[e]);
+                    }
+                }
             };
 
             var send = function (obj) {
@@ -105,11 +148,10 @@
                 send({
                     type: 'event',
                     event: 'click',
-                    x: mouseX,
-                    y: mouseY
+                    x: (mouseX - (rect.width / 2)) + player.oX,
+                    y: (mouseY - (rect.height / 2)) + player.oY
                 });
-            });
-            canvas.mousedown(function (e) {
+            }).mouseup(function (e) {
                 console.log('mouseup');
             });
 
@@ -119,19 +161,20 @@
                 var rect = ctx.canvas.getBoundingClientRect();
                 mouseX = e.clientX - rect.left;
                 mouseY = e.clientY - rect.top;
+                console.log(mouseX, mouseY, player.x, player.y);
                 send({
                     type: 'event',
                     event: 'mousemove',
-                    x: mouseX,
-                    y: mouseY
+                    x: (mouseX - (rect.width / 2)) + player.oX,
+                    y: (mouseY - (rect.height / 2)) + player.oY
                 });
 
-                if (mouseX < rect.left || mouseX > rect.width || mouseY < rect.top || mouseY > rect.height) {
-                    send({
-                        type: 'action',
-                        action: 'stopPlayer'
-                    });
-                }
+                // if (mouseX < rect.left || mouseX > rect.width || mouseY < rect.top || mouseY > rect.height) {
+                //     send({
+                //         type: 'action',
+                //         action: 'stopPlayer'
+                //     });
+                // }
             });
 
             canvas.contextmenu(function (e) {
@@ -157,13 +200,13 @@
                     e.preventDefault();
                     e.stopImmediatePropagation();
                     var checkCode = function (a, b, direction) {
-                        if ((code === a || code === b) && !(mouseX < rect.left || mouseX > rect.width || mouseY < rect.top || mouseY > rect.height)) {
+                        if ((code === a || code === b)){ //} && !(mouseX < rect.left || mouseX > rect.width || mouseY < rect.top || mouseY > rect.height)) {
                             send({
                                 type: 'event',
                                 event: 'keydown',
                                 direction: direction,
-                                x: mouseX,
-                                y: mouseY
+                                x: (mouseX - (rect.width / 2)) + player.oX,
+                                y: (mouseY - (rect.height / 2)) + player.oY
                             });
                         }
                     };
@@ -203,36 +246,46 @@
                 return color;
             };
 
-            var drawType = function (type) {
-                var e;
-                for (e in entities) {
-                    if (entities[e] !== null) {
-                        if (entities[e].type === type) {
-                            if (entities[e].shape === 'circle' && !entities[e].isDead) {
-                                ctx.beginPath();
-                                ctx.fillStyle = getEntityColor(entities[e]);
-                                ctx.arc(entities[e].x, entities[e].y, entities[e].r, 0, 2 * Math.PI, false);
-                                ctx.fill();
-                            } else if (entities[e].shape === 'rectangle') {
-                                ctx.beginPath();
-                                ctx.fillStyle = getEntityColor(entities[e]);
-                                ctx.rect(entities[e].x, entities[e].y, entities[e].w, entities[e].h);
-                                ctx.fill();
-                            } else if (entities[e].shape === 'line') {
-                                ctx.beginPath();
-                                ctx.moveTo(entities[e].x1, entities[e].y1);
-                                ctx.lineTo(entities[e].x2, entities[e].y2);
-                                ctx.lineWidth = 3;
-                                ctx.strokeStyle = 'black';
-                                ctx.stroke();
-                            }
 
-                            // add stroke to current player
-                            if (player && player.id === entities[e].id) {
-                                ctx.beginPath();
-                                ctx.lineWidth = 3;
-                                ctx.strokeStyle = 'black';
-                                ctx.stroke();
+
+            var drawType = function (type) {
+                if(player){
+
+                    var e;
+                    for (e in entities) {
+                        if (entities[e] !== null) {
+
+                            if (entities[e].type === type) {
+                                if (entities[e].shape === 'circle' && !entities[e].isDead) {
+                                    ctx.beginPath();
+                                    ctx.fillStyle = getEntityColor(entities[e]);
+                                    ctx.arc(entities[e].x, entities[e].y, entities[e].r, 0, 2 * Math.PI, false);
+                                    ctx.fill();
+                                } else if (entities[e].shape === 'rectangle') {
+                                    ctx.beginPath();
+                                    ctx.fillStyle = getEntityColor(entities[e]);
+                                    ctx.rect(entities[e].x, entities[e].y, entities[e].w, entities[e].h);
+                                    ctx.fill();
+                                } else if (entities[e].shape === 'line') {
+                                    // if(entities[e].playerId === player.id){
+                                    //     entities[e].x1 = player.x;
+                                    //     entities[e].y1 = player.y;
+                                    // }
+                                    ctx.beginPath();
+                                    ctx.moveTo(entities[e].x1, entities[e].y1);
+                                    ctx.lineTo(entities[e].x2, entities[e].y2);
+                                    ctx.lineWidth = 3;
+                                    ctx.strokeStyle = 'black';
+                                    ctx.stroke();
+                                }
+
+                                // add stroke to current player
+                                if (player.id === entities[e].id) {
+                                    ctx.beginPath();
+                                    ctx.lineWidth = 3;
+                                    ctx.strokeStyle = 'black';
+                                    ctx.stroke();
+                                }
                             }
                         }
                     }
@@ -243,35 +296,36 @@
             var draw = function () {
                 ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-                drawType('thing');
                 drawType('bullet');
                 drawType('gun');
                 drawType('player');
+                drawType('thing');
+
 
                 if (player) {
-                    ctx.font = "18px serif";
+                    ctx.font = "14px serif";
                     ctx.strokeStyle = 'white';
                     ctx.fillStyle = 'black';
-                    ctx.strokeText('Ammo: ' + player.ammo + '/' + player.maxAmmo, 10.5, 30.5);
-                    ctx.fillText('Ammo: ' + player.ammo + '/' + player.maxAmmo, 10.5, 30.5);
+                    ctx.strokeText('Ammo: ' + player.ammo + '/' + player.maxAmmo, 10, 30);
+                    ctx.fillText('Ammo: ' + player.ammo + '/' + player.maxAmmo, 10, 30);
                     if (player.reloadPercentage) {
-                        ctx.strokeText(player.reloadPercentage + '% reloaded...', 120.5, 30.5);
-                        ctx.fillText(player.reloadPercentage + '% reloaded...', 120.5, 30.5);
+                        ctx.strokeText(player.reloadPercentage + '% reloaded...', 90, 30);
+                        ctx.fillText(player.reloadPercentage + '% reloaded...', 90, 30);
                     } else if (player.ammo === 0) {
-                        ctx.strokeText('Press R to reload!', 120.5, 30.5);
-                        ctx.fillText('Press R to reload!', 120.5, 30.5);
+                        ctx.strokeText('Press R to reload!', 90, 30);
+                        ctx.fillText('Press R to reload!', 90, 30);
                     }
 
-                    ctx.strokeText('Kills: ' + player.kills, 10.5, 60.5);
-                    ctx.fillText('Kills: ' + player.kills, 10.5, 60.5);
-                    ctx.strokeText('Deaths: ' + player.deaths, 10.5, 90.5);
-                    ctx.fillText('Deaths: ' + player.deaths, 10.5, 90.5);
-                    ctx.strokeText('Health: ' + player.healthPercentage + '%', 10.5, 120.5);
-                    ctx.fillText('Health: ' + player.healthPercentage + '%', 10.5, 120.5);
+                    ctx.strokeText('Kills: ' + player.kills, 10, 50);
+                    ctx.fillText('Kills: ' + player.kills, 10, 50);
+                    ctx.strokeText('Deaths: ' + player.deaths, 10, 70);
+                    ctx.fillText('Deaths: ' + player.deaths, 10, 70);
+                    ctx.strokeText('Health: ' + player.healthPercentage + '%', 10, 90);
+                    ctx.fillText('Health: ' + player.healthPercentage + '%', 10, 90);
 
                     if (player.isDead) {
-                        ctx.strokeText('Press Spacebar to respawn!', 10.5, 150.5);
-                        ctx.fillText('Press Spacebar to respawn!', 10.5, 150.5);
+                        ctx.strokeText('Press Spacebar to respawn!', 10, 110);
+                        ctx.fillText('Press Spacebar to respawn!', 10, 110);
                     } else {
                         //show health
                     }

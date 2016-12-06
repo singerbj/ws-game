@@ -10,8 +10,8 @@
     var clients;
     var playerMap = {};
     var gunMap = {};
-    var canvasWidth = 1920;
-    var canvasHeight = 1080;
+    var canvasWidth = 960;
+    var canvasHeight = 540;
 
     var entities = {};
 
@@ -22,8 +22,8 @@
         var newY = Math.random(0, 20);
         var vx = negativeX * newX;
         var vy = negativeY * newY;
-        var x = Helpers.rand(0, 800);
-        var y = Helpers.rand(0, 600);
+        var x = Helpers.rand(-400, 400);
+        var y = Helpers.rand(-300, 300);
         var r = Helpers.rand(10, 40);
         var width = r * 2;
         var height = r * 2;
@@ -70,22 +70,6 @@
                 b: Helpers.rand(100, 200),
                 a: 1
             },
-            beforeUpdate: function () {
-                this.healthPercentage = Math.floor((this.health / this.maxHealth) * 100);
-                if (this.timeToReload && Date.now() >= this.timeToReload) {
-                    this.reloading = false;
-                    delete this.timeToReload;
-                    delete this.reloadPercentage;
-                    this.ammo = this.maxAmmo;
-                } else {
-                    this.reloadPercentage = 100 - (Math.floor(((player.timeToReload - Date.now()) / this.reloadTime) * 100) - 1);
-                }
-                if (this.reloading === true && !this.timeToReload) {
-                    this.timeToReload = Date.now() + this.reloadTime;
-                }
-                this.manageGun();
-            },
-            onCollision: function (collidedObj) {},
             acc: {
                 left: 0,
                 up: 0,
@@ -105,14 +89,33 @@
             reloadTime: 1250,
             reloading: false,
             isDead: false,
+            mouse: {
+                x: canvasWidth / 2,
+                y: canvasHeight / 2
+            },
+            kills: 0,
+            deaths: 0,
+            pps: 4,
+            beforeUpdate: function () {
+                this.healthPercentage = Math.floor((this.health / this.maxHealth) * 100);
+                if (this.timeToReload && Date.now() >= this.timeToReload) {
+                    this.reloading = false;
+                    delete this.timeToReload;
+                    delete this.reloadPercentage;
+                    this.ammo = this.maxAmmo;
+                } else {
+                    this.reloadPercentage = 100 - (Math.floor(((player.timeToReload - Date.now()) / this.reloadTime) * 100) - 1);
+                }
+                if (this.reloading === true && !this.timeToReload) {
+                    this.timeToReload = Date.now() + this.reloadTime;
+                }
+                this.manageGun();
+            },
+            onCollision: function (collidedObj) {},
             reload: function () {
                 if (!this.isDead && this.reloading === false && this.ammo < 5) {
                     this.reloading = true;
                 }
-            },
-            mouse: {
-                x: canvasWidth / 2,
-                y: canvasHeight / 2
             },
             stopMoving: function () {
                 this.dObj = {
@@ -218,15 +221,13 @@
 
                     var gun = new Shapes.Line(player.x, player.y, gunX, gunY, {
                         type: 'gun',
-                        color: 'black'
+                        color: 'black',
+                        playerId: player.id
                     });
                     entities[gun.id] = gun;
                     gunMap[ws.playerId] = gun;
                 }
             },
-            kills: 0,
-            deaths: 0,
-            pps: 4,
             adjustAcc: function (key, val) {
                 if (this.dObj[key]) {
                     if (this.acc[key] <= 30) {
@@ -254,7 +255,7 @@
                 var e1, tempCircle, e1x, e1y;
                 for (e1 in entities) {
                     if (entities[e1] !== undefined) {
-                        if (entities[e1] !== this && entities[e1].playerId !== this.id && (entities[e1].type === 'thing' || entities[e1].type === 'player')) {
+                        if (entities[e1] !== this && entities[e1].playerId !== this.id && (entities[e1].type === 'thing' || (entities[e1].type === 'player' && !entities[e1].isDead))) {
                             tempCircle = new Shapes.Circle(tempX, tempY, 10);
                             while (Collison.check(entities[e1], tempCircle) === true) {
                                 if (tempX !== Math.floor(this.x)) {
@@ -304,10 +305,8 @@
                         }
                     }
                 }
-
                 this.x = tempX;
                 this.y = tempY;
-
             }
         });
         entities[player.id] = player;
