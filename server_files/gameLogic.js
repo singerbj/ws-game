@@ -12,16 +12,17 @@
     var gunMap = {};
     var canvasWidth = 960;
     var canvasHeight = 540;
+    var fps;
 
     var entities = {};
 
     var createAndAddWall = function () {
         var x = Helpers.rand(-2200, 2200);
         var y = Helpers.rand(-2200, 2200);
-        var r = Helpers.rand(10, 200);
+        // var r = Helpers.rand(10, 200);
 
-        var wall = new Shapes.Circle(x, y, r, {
-            // var wall = new Shapes.Rectangle(x, y, width, height, {
+        // var wall = new Shapes.Circle(x, y, r, {
+        var wall = new Shapes.Rectangle(x, y, Helpers.rand(50, 600), Helpers.rand(50, 600), {
             color: 'black',
             type: 'wall',
             beforeUpdate: function () {},
@@ -217,69 +218,71 @@
                 }
             },
             updatePosition: function (dt) {
-                this.adjustAcc('left', this.pps);
-                this.adjustAcc('up', this.pps);
-                this.adjustAcc('right', this.pps);
-                this.adjustAcc('down', this.pps);
+                if (!this.isDead) {
+                    this.adjustAcc('left', this.pps);
+                    this.adjustAcc('up', this.pps);
+                    this.adjustAcc('right', this.pps);
+                    this.adjustAcc('down', this.pps);
 
-                var tempX = Math.floor(this.x - (this.pps * (this.acc.left - this.acc.right) * dt));
-                var tempY = Math.floor(this.y - (this.pps * (this.acc.up - this.acc.down) * dt));
+                    var tempX = Math.floor(this.x - (this.pps * (this.acc.left - this.acc.right) * dt));
+                    var tempY = Math.floor(this.y - (this.pps * (this.acc.up - this.acc.down) * dt));
 
-                var e1, tempCircle, e1x, e1y;
-                for (e1 in entities) {
-                    if (entities[e1] !== undefined) {
-                        if (entities[e1] !== this && entities[e1].playerId !== this.id && (entities[e1].type === 'wall' || (entities[e1].type === 'player' && !entities[e1].isDead))) {
-                            tempCircle = new Shapes.Circle(tempX, tempY, 10);
-                            while (Collison.check(entities[e1], tempCircle) === true) {
-                                if (tempX !== Math.floor(this.x)) {
-
-                                    if (tempX > Math.floor(this.x)) {
-                                        tempX -= 1;
-                                    } else {
-                                        tempX += 1;
-                                    }
-                                    this.acc.left = 0;
-                                    this.acc.right = 0;
-                                }
-                                if (tempY !== Math.floor(this.y)) {
-                                    if (tempY > Math.floor(this.y)) {
-                                        tempY -= 1;
-                                    } else {
-                                        tempY += 1;
-                                    }
-                                    this.acc.up = 0;
-                                    this.acc.down = 0;
-                                }
-                                if (tempX === Math.floor(this.x) && tempY === Math.floor(this.y)) {
-                                    e1x = Math.floor(entities[e1].x);
-                                    e1y = Math.floor(entities[e1].y);
-
-                                    //if player is colliding with a rectangle, get the center of the rectangle rather than the top left corner
-                                    if (entities[e1].shape === 'rectangle') {
-                                        e1x = Math.floor(e1x + (entities[e1].w / 2));
-                                        e1y = Math.floor(e1y + (entities[e1].h / 2));
-                                    }
-
-                                    if (e1x > tempX) {
-                                        tempX -= 1;
-                                    } else {
-                                        tempX += 1;
-                                    }
-                                    this.x = tempX;
-                                    if (e1y > tempY) {
-                                        tempY -= 1;
-                                    } else {
-                                        tempY += 1;
-                                    }
-                                    this.y = tempY;
-                                }
+                    var e1, tempCircle, e1x, e1y;
+                    for (e1 in entities) {
+                        if (entities[e1] !== undefined) {
+                            if (entities[e1] !== this && entities[e1].playerId !== this.id && (entities[e1].type === 'wall' || (entities[e1].type === 'player' && !entities[e1].isDead))) {
                                 tempCircle = new Shapes.Circle(tempX, tempY, 10);
+                                while (Collison.check(entities[e1], tempCircle) === true) {
+                                    if (tempX !== Math.floor(this.x)) {
+
+                                        if (tempX > Math.floor(this.x)) {
+                                            tempX -= 1;
+                                        } else {
+                                            tempX += 1;
+                                        }
+                                        this.acc.left = 0;
+                                        this.acc.right = 0;
+                                    }
+                                    if (tempY !== Math.floor(this.y)) {
+                                        if (tempY > Math.floor(this.y)) {
+                                            tempY -= 1;
+                                        } else {
+                                            tempY += 1;
+                                        }
+                                        this.acc.up = 0;
+                                        this.acc.down = 0;
+                                    }
+                                    if (tempX === Math.floor(this.x) && tempY === Math.floor(this.y)) {
+                                        e1x = Math.floor(entities[e1].x);
+                                        e1y = Math.floor(entities[e1].y);
+
+                                        //if player is colliding with a rectangle, get the center of the rectangle rather than the top left corner
+                                        if (entities[e1].shape === 'rectangle') {
+                                            e1x = Math.floor(e1x + (entities[e1].w / 2));
+                                            e1y = Math.floor(e1y + (entities[e1].h / 2));
+                                        }
+
+                                        if (e1x > tempX) {
+                                            tempX -= 1;
+                                        } else {
+                                            tempX += 1;
+                                        }
+                                        this.x = tempX;
+                                        if (e1y > tempY) {
+                                            tempY -= 1;
+                                        } else {
+                                            tempY += 1;
+                                        }
+                                        this.y = tempY;
+                                    }
+                                    tempCircle = new Shapes.Circle(tempX, tempY, 10);
+                                }
                             }
                         }
                     }
+                    this.x = tempX;
+                    this.y = tempY;
                 }
-                this.x = tempX;
-                this.y = tempY;
             }
         });
         entities[player.id] = player;
@@ -342,7 +345,8 @@
                 if (ws.readyState === 1) {
                     ws.send(JSON.stringify({
                         player: playerMap[ws.playerId],
-                        entities: entities
+                        entities: entities,
+                        fps: fps
                     }));
                     // console.log(Object.keys(entities).length);
                 }
@@ -353,7 +357,18 @@
     //game loop
     var raf = require('raf');
     var lastTime;
+    var lastTimeFps;
+    var lastFpsDraw = Date.now();
     var draw = function () {
+        //check fps
+        var currentTime = Date.now();
+        if (lastTimeFps && currentTime - lastFpsDraw > 1000) {
+            lastFpsDraw = currentTime;
+            fps = Math.floor(1000 / (currentTime - lastTimeFps));
+        }
+        lastTimeFps = currentTime;
+
+
         //update time
         var now = Date.now();
         if (lastTime) {

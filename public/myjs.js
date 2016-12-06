@@ -56,6 +56,7 @@
         // });
         var entities = {};
         var player;
+        var serverFps;
         var offset;
         var mouseX;
         var mouseY;
@@ -122,6 +123,7 @@
                 obj = JSON.parse(m.data);
                 entities = obj.entities;
                 player = obj.player;
+                serverFps = obj.fps;
                 // console.log('recieved: ', m);
 
                 adjustPlayerForCenteredPlayer();
@@ -254,11 +256,9 @@
 
             var drawType = function (type) {
                 if (player) {
-
                     var e;
                     for (e in entities) {
-                        if (entities[e] !== null) {
-
+                        if (entities[e] !== undefined) {
                             if (entities[e].type === type) {
                                 if (entities[e].shape === 'circle' && !entities[e].isDead) {
                                     ctx.beginPath();
@@ -271,10 +271,6 @@
                                     ctx.rect(entities[e].x, entities[e].y, entities[e].w, entities[e].h);
                                     ctx.fill();
                                 } else if (entities[e].shape === 'line') {
-                                    // if(entities[e].playerId === player.id){
-                                    //     entities[e].x1 = player.x;
-                                    //     entities[e].y1 = player.y;
-                                    // }
                                     ctx.beginPath();
                                     ctx.moveTo(entities[e].x1, entities[e].y1);
                                     ctx.lineTo(entities[e].x2, entities[e].y2);
@@ -284,7 +280,7 @@
                                 }
 
                                 // add stroke to current player
-                                if (player.id === entities[e].id) {
+                                if (player.id === entities[e].id && !player.isDead) {
                                     ctx.beginPath();
                                     ctx.lineWidth = 3;
                                     ctx.strokeStyle = 'black';
@@ -346,8 +342,14 @@
 
                     if (fps) {
                         ctx.textAlign = "right";
-                        ctx.strokeText(fps + ' fps', canvas.width() - 10, 20);
-                        ctx.fillText(fps + ' fps', canvas.width() - 10, 20);
+                        ctx.strokeText(fps + ' fps (browser)', canvas.width() - 10, 20);
+                        ctx.fillText(fps + ' fps (browser)', canvas.width() - 10, 20);
+                    }
+
+                    if (serverFps) {
+                        ctx.textAlign = "right";
+                        ctx.strokeText(serverFps + ' fps (server)', canvas.width() - 10, 40);
+                        ctx.fillText(serverFps + ' fps (server)', canvas.width() - 10, 40);
                     }
                 }
 
