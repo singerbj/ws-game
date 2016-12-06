@@ -16,34 +16,16 @@
     var entities = {};
 
     var createAndAddWall = function () {
-        // var negativeX = [1, -1][Math.round(Math.random())];
-        // var negativeY = [1, -1][Math.round(Math.random())];
-        // var newX = Math.random(0, 20);
-        // var newY = Math.random(0, 20);
-        // var vx = negativeX * newX;
-        // var vy = negativeY * newY;
         var x = Helpers.rand(-2200, 2200);
         var y = Helpers.rand(-2200, 2200);
         var r = Helpers.rand(10, 200);
-        // var width = r * 2;
-        // var height = r * 2;
-        // var width = Helpers.rand(10, 400);
-        // var height = Helpers.rand(10, 400);
 
         var wall = new Shapes.Circle(x, y, r, {
             // var wall = new Shapes.Rectangle(x, y, width, height, {
             color: 'black',
             type: 'wall',
-            beforeUpdate: function () {
-                // this.x += vx;
-                // this.y += vy;
-                // if (this.x < -width || this.y < -height || this.x > (canvasWidth + width) || this.y > (canvasHeight + height)) {
-                //     delete entities[this.id];
-                // }
-            },
-            onCollision: function (collidedObj) {
-                // this.color = 'purple';
-            },
+            beforeUpdate: function () {},
+            onCollision: function (collidedObj) {},
             isDead: false
         });
         entities[wall.id] = wall;
@@ -54,10 +36,6 @@
     for (i = 0; i < 50; i += 1) {
         createAndAddWall();
     }
-    // setInterval(function () {
-    //     createAndAddWall();
-    // }, 1000);
-
 
     var addNewPlayer = function (ws) {
         var player = new Shapes.Circle(Helpers.rand(-600, 600), Helpers.rand(-600, 600), 10, {
