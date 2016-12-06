@@ -72,7 +72,6 @@
             acc: {
                 left: 0,
                 up: 0,
-                es
                 right: 0,
                 down: 0
             },
