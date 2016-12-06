@@ -84,12 +84,12 @@
                 }
             };
 
-            var adjustPlayerForCenteredPlayer= function(){
-                if(!player.adjusted){
+            var adjustPlayerForCenteredPlayer = function () {
+                if (!player.adjusted) {
                     var rect = ctx.canvas.getBoundingClientRect();
                     offset = {
-                        x:  (rect.width / 2) - player.x,
-                        y:  (rect.height / 2) - player.y
+                        x: (rect.width / 2) - player.x,
+                        y: (rect.height / 2) - player.y
                     };
 
                     player.oX = player.x;
@@ -102,12 +102,12 @@
                 }
             };
 
-            var adjustEntityForCenteredPlayer = function(entity){
-                if(!entity.adjusted){
-                    if(entity.x){
+            var adjustEntityForCenteredPlayer = function (entity) {
+                if (!entity.adjusted) {
+                    if (entity.x) {
                         entity.x = entity.x + offset.x;
                         entity.y = entity.y + offset.y;
-                    }else if(entity.x1){
+                    } else if (entity.x1) {
                         entity.x1 = entity.x1 + offset.x;
                         entity.y1 = entity.y1 + offset.y;
                         entity.x2 = entity.x2 + offset.x;
@@ -141,40 +141,42 @@
             };
 
             canvas.mousedown(function (e) {
-                var rect = ctx.canvas.getBoundingClientRect();
-                mouseX = e.clientX - rect.left;
-                mouseY = e.clientY - rect.top;
+                if (player && player.oX && player.oY) {
+                    var rect = ctx.canvas.getBoundingClientRect();
+                    mouseX = e.clientX - rect.left;
+                    mouseY = e.clientY - rect.top;
 
-                send({
-                    type: 'event',
-                    event: 'click',
-                    x: (mouseX - (rect.width / 2)) + player.oX,
-                    y: (mouseY - (rect.height / 2)) + player.oY
-                });
-            }).mouseup(function (e) {
-                console.log('mouseup');
-            });
+                    send({
+                        type: 'event',
+                        event: 'click',
+                        x: (mouseX - (rect.width / 2)) + player.oX,
+                        y: (mouseY - (rect.height / 2)) + player.oY
+                    });
+                }
+            }).mouseup(function (e) {});
 
             body.mousemove(function (e) {
-                e.preventDefault();
-                e.stopImmediatePropagation();
-                var rect = ctx.canvas.getBoundingClientRect();
-                mouseX = e.clientX - rect.left;
-                mouseY = e.clientY - rect.top;
-                console.log(mouseX, mouseY, player.x, player.y);
-                send({
-                    type: 'event',
-                    event: 'mousemove',
-                    x: (mouseX - (rect.width / 2)) + player.oX,
-                    y: (mouseY - (rect.height / 2)) + player.oY
-                });
+                if (player && player.oX && player.oY) {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    var rect = ctx.canvas.getBoundingClientRect();
+                    mouseX = e.clientX - rect.left;
+                    mouseY = e.clientY - rect.top;
+                    send({
+                        type: 'event',
+                        event: 'mousemove',
+                        x: (mouseX - (rect.width / 2)) + player.oX,
+                        y: (mouseY - (rect.height / 2)) + player.oY
+                    });
 
-                // if (mouseX < rect.left || mouseX > rect.width || mouseY < rect.top || mouseY > rect.height) {
-                //     send({
-                //         type: 'action',
-                //         action: 'stopPlayer'
-                //     });
-                // }
+                    if (mouseX < rect.left || mouseX > rect.width || mouseY < rect.top || mouseY > rect.height) {
+                        send({
+                            type: 'action',
+                            action: 'stopPlayer'
+                        });
+                    }
+                }
+
             });
 
             canvas.contextmenu(function (e) {
@@ -184,36 +186,38 @@
             });
 
             window.addEventListener('keydown', function (e) {
-                var rect = ctx.canvas.getBoundingClientRect();
-                var code = e.keyCode;
-                if (code === 82) {
-                    send({
-                        type: 'action',
-                        action: 'reload'
-                    });
-                } else if (code === 32) {
-                    send({
-                        type: 'action',
-                        action: 'respawn'
-                    });
-                } else {
-                    e.preventDefault();
-                    e.stopImmediatePropagation();
-                    var checkCode = function (a, b, direction) {
-                        if ((code === a || code === b)){ //} && !(mouseX < rect.left || mouseX > rect.width || mouseY < rect.top || mouseY > rect.height)) {
-                            send({
-                                type: 'event',
-                                event: 'keydown',
-                                direction: direction,
-                                x: (mouseX - (rect.width / 2)) + player.oX,
-                                y: (mouseY - (rect.height / 2)) + player.oY
-                            });
-                        }
-                    };
-                    checkCode(37, 65, 'left');
-                    checkCode(38, 87, 'up');
-                    checkCode(39, 68, 'right');
-                    checkCode(40, 83, 'down');
+                if (player && player.oX && player.oY) {
+                    var rect = ctx.canvas.getBoundingClientRect();
+                    var code = e.keyCode;
+                    if (code === 82) {
+                        send({
+                            type: 'action',
+                            action: 'reload'
+                        });
+                    } else if (code === 32) {
+                        send({
+                            type: 'action',
+                            action: 'respawn'
+                        });
+                    } else {
+                        e.preventDefault();
+                        e.stopImmediatePropagation();
+                        var checkCode = function (a, b, direction) {
+                            if ((code === a || code === b)) { //} && !(mouseX < rect.left || mouseX > rect.width || mouseY < rect.top || mouseY > rect.height)) {
+                                send({
+                                    type: 'event',
+                                    event: 'keydown',
+                                    direction: direction,
+                                    x: (mouseX - (rect.width / 2)) + player.oX,
+                                    y: (mouseY - (rect.height / 2)) + player.oY
+                                });
+                            }
+                        };
+                        checkCode(37, 65, 'left');
+                        checkCode(38, 87, 'up');
+                        checkCode(39, 68, 'right');
+                        checkCode(40, 83, 'down');
+                    }
                 }
             });
 
@@ -249,7 +253,7 @@
 
 
             var drawType = function (type) {
-                if(player){
+                if (player) {
 
                     var e;
                     for (e in entities) {
@@ -274,7 +278,7 @@
                                     ctx.beginPath();
                                     ctx.moveTo(entities[e].x1, entities[e].y1);
                                     ctx.lineTo(entities[e].x2, entities[e].y2);
-                                    ctx.lineWidth = 3;
+                                    ctx.lineWidth = 5;
                                     ctx.strokeStyle = 'black';
                                     ctx.stroke();
                                 }
@@ -284,6 +288,7 @@
                                     ctx.beginPath();
                                     ctx.lineWidth = 3;
                                     ctx.strokeStyle = 'black';
+                                    ctx.arc(entities[e].x, entities[e].y, entities[e].r, 0, 2 * Math.PI, false);
                                     ctx.stroke();
                                 }
                             }
@@ -292,43 +297,56 @@
                 }
             };
 
+            var lastTime;
+            var fps;
+            var lastFpsDraw = Date.now();
             //game loop
             var draw = function () {
+                var currentTime = Date.now();
+                if (lastTime && currentTime - lastFpsDraw > 1000) {
+                    lastFpsDraw = currentTime;
+                    fps = Math.floor(1000 / (currentTime - lastTime));
+                }
+                lastTime = currentTime;
+
                 ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
                 drawType('bullet');
                 drawType('gun');
                 drawType('player');
-                drawType('thing');
+                drawType('wall');
 
 
                 if (player) {
-                    ctx.font = "14px serif";
+                    ctx.font = "bold 14px sans-serif";
+                    ctx.textAlign = "left";
                     ctx.strokeStyle = 'white';
                     ctx.fillStyle = 'black';
-                    ctx.strokeText('Ammo: ' + player.ammo + '/' + player.maxAmmo, 10, 30);
-                    ctx.fillText('Ammo: ' + player.ammo + '/' + player.maxAmmo, 10, 30);
+                    ctx.strokeText('Ammo: ' + player.ammo + '/' + player.maxAmmo, 10, 20);
+                    ctx.fillText('Ammo: ' + player.ammo + '/' + player.maxAmmo, 10, 20);
                     if (player.reloadPercentage) {
-                        ctx.strokeText(player.reloadPercentage + '% reloaded...', 90, 30);
-                        ctx.fillText(player.reloadPercentage + '% reloaded...', 90, 30);
+                        ctx.strokeText('Ammo: ' + player.reloadPercentage + '% reloaded...', 110, 20);
+                        ctx.fillText('Ammo: ' + player.reloadPercentage + '% reloaded...', 110, 20);
                     } else if (player.ammo === 0) {
-                        ctx.strokeText('Press R to reload!', 90, 30);
-                        ctx.fillText('Press R to reload!', 90, 30);
+                        ctx.strokeText('Ammo: Press R to reload!', 110, 20);
+                        ctx.fillText('Ammo: Press R to reload!', 110, 20);
                     }
 
-                    ctx.strokeText('Kills: ' + player.kills, 10, 50);
-                    ctx.fillText('Kills: ' + player.kills, 10, 50);
-                    ctx.strokeText('Deaths: ' + player.deaths, 10, 70);
-                    ctx.fillText('Deaths: ' + player.deaths, 10, 70);
-                    ctx.strokeText('Health: ' + player.healthPercentage + '%', 10, 90);
-                    ctx.fillText('Health: ' + player.healthPercentage + '%', 10, 90);
+                    ctx.strokeText('Kills: ' + player.kills, 10, 40);
+                    ctx.fillText('Kills: ' + player.kills, 10, 40);
+                    ctx.strokeText('Deaths: ' + player.deaths, 10, 60);
+                    ctx.fillText('Deaths: ' + player.deaths, 10, 60);
+                    ctx.strokeText('Health: ' + player.healthPercentage + '%', 10, 80);
+                    ctx.fillText('Health: ' + player.healthPercentage + '%', 10, 80);
 
                     if (player.isDead) {
-                        ctx.strokeText('Press Spacebar to respawn!', 10, 110);
-                        ctx.fillText('Press Spacebar to respawn!', 10, 110);
-                    } else {
-                        //show health
+                        ctx.strokeText('Press Spacebar to respawn!', 10, 100);
+                        ctx.fillText('Press Spacebar to respawn!', 10, 100);
                     }
+
+                    ctx.textAlign = "right";
+                    ctx.strokeText(fps + ' fps', canvas.width() - 10, 20);
+                    ctx.fillText(fps + ' fps', canvas.width() - 10, 20);
                 }
 
                 window.requestAnimationFrame(draw);

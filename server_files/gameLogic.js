@@ -15,53 +15,52 @@
 
     var entities = {};
 
-    var createAndAddThing = function () {
-        var negativeX = [1, -1][Math.round(Math.random())];
-        var negativeY = [1, -1][Math.round(Math.random())];
-        var newX = Math.random(0, 20);
-        var newY = Math.random(0, 20);
-        var vx = negativeX * newX;
-        var vy = negativeY * newY;
-        var x = Helpers.rand(-400, 400);
-        var y = Helpers.rand(-300, 300);
-        var r = Helpers.rand(10, 40);
-        var width = r * 2;
-        var height = r * 2;
-        // var width = Helpers.rand(10, 100);
-        // var height = Helpers.rand(10, 100);
+    var createAndAddWall = function () {
+        // var negativeX = [1, -1][Math.round(Math.random())];
+        // var negativeY = [1, -1][Math.round(Math.random())];
+        // var newX = Math.random(0, 20);
+        // var newY = Math.random(0, 20);
+        // var vx = negativeX * newX;
+        // var vy = negativeY * newY;
+        var x = Helpers.rand(-2200, 2200);
+        var y = Helpers.rand(-2200, 2200);
+        var r = Helpers.rand(10, 200);
+        // var width = r * 2;
+        // var height = r * 2;
+        // var width = Helpers.rand(10, 400);
+        // var height = Helpers.rand(10, 400);
 
-        var thing = new Shapes.Circle(x, y, r, {
-            // var thing = new Shapes.Rectangle(x, y, width, height, {
-            color: 'blue',
-            type: 'thing',
+        var wall = new Shapes.Circle(x, y, r, {
+            // var wall = new Shapes.Rectangle(x, y, width, height, {
+            color: 'black',
+            type: 'wall',
             beforeUpdate: function () {
-                this.color = 'blue';
-                this.x += vx;
-                this.y += vy;
-                if (this.x < -width || this.y < -height || this.x > (canvasWidth + width) || this.y > (canvasHeight + height)) {
-                    delete entities[this.id];
-                }
+                // this.x += vx;
+                // this.y += vy;
+                // if (this.x < -width || this.y < -height || this.x > (canvasWidth + width) || this.y > (canvasHeight + height)) {
+                //     delete entities[this.id];
+                // }
             },
             onCollision: function (collidedObj) {
-                this.color = 'purple';
+                // this.color = 'purple';
             },
             isDead: false
         });
-        entities[thing.id] = thing;
+        entities[wall.id] = wall;
     };
 
-    //create some shapes to shoot every 2 seconds
+    //create some walls
     var i;
-    for (i = 0; i < 15; i += 1) {
-        createAndAddThing();
+    for (i = 0; i < 50; i += 1) {
+        createAndAddWall();
     }
-    setInterval(function () {
-        createAndAddThing();
-    }, 1000);
+    // setInterval(function () {
+    //     createAndAddWall();
+    // }, 1000);
 
 
     var addNewPlayer = function (ws) {
-        var player = new Shapes.Circle(Helpers.rand(0, 300), Helpers.rand(0, 300), 10, {
+        var player = new Shapes.Circle(Helpers.rand(-600, 600), Helpers.rand(-600, 600), 10, {
             // var player = new Shapes.Rectangle(Helpers.rand(0, 300), Helpers.rand(0, 300), 10, 10, {
             type: 'player',
             color: {
@@ -73,6 +72,7 @@
             acc: {
                 left: 0,
                 up: 0,
+                es
                 right: 0,
                 down: 0
             },
@@ -84,8 +84,8 @@
             },
             maxHealth: 1000,
             health: 1000,
-            maxAmmo: 5,
-            ammo: 5,
+            maxAmmo: 10,
+            ammo: 10,
             reloadTime: 1250,
             reloading: false,
             isDead: false,
@@ -113,7 +113,7 @@
             },
             onCollision: function (collidedObj) {},
             reload: function () {
-                if (!this.isDead && this.reloading === false && this.ammo < 5) {
+                if (!this.isDead && this.reloading === false && this.ammo < this.maxAmmo) {
                     this.reloading = true;
                 }
             },
@@ -179,12 +179,8 @@
                                         player.kills += 1;
                                     }
                                     delete entities[this.id];
-
-                                } else if (collidedObj && collidedObj.type === 'thing' && !collidedObj.isDead) {
-                                    collidedObj.isDead = true;
-                                    delete entities[collidedObj.id];
+                                } else if (collidedObj && collidedObj.type === 'wall' && !collidedObj.isDead) {
                                     delete entities[this.id];
-
                                 }
                             }
                         }
@@ -255,7 +251,7 @@
                 var e1, tempCircle, e1x, e1y;
                 for (e1 in entities) {
                     if (entities[e1] !== undefined) {
-                        if (entities[e1] !== this && entities[e1].playerId !== this.id && (entities[e1].type === 'thing' || (entities[e1].type === 'player' && !entities[e1].isDead))) {
+                        if (entities[e1] !== this && entities[e1].playerId !== this.id && (entities[e1].type === 'wall' || (entities[e1].type === 'player' && !entities[e1].isDead))) {
                             tempCircle = new Shapes.Circle(tempX, tempY, 10);
                             while (Collison.check(entities[e1], tempCircle) === true) {
                                 if (tempX !== Math.floor(this.x)) {
