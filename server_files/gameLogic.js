@@ -12,42 +12,104 @@
     var gunMap = {};
     var canvasWidth = 960;
     var canvasHeight = 540;
+    var start = 1;
+    var end = 4400;
     var fps;
 
     var entities = {};
 
-    var createAndAddWall = function () {
-        var x = Helpers.rand(-2200, 2200);
-        var y = Helpers.rand(-2200, 2200);
-        // var r = Helpers.rand(10, 200);
+    var createAndAddFloor = function () {
+        var floorOptions = {
+            color: '#ADC6FF',
+            type: 'floor',
+            beforeUpdate: function () {},
+            onCollision: function (collidedObj) {}
+        };
+        var floor = new Shapes.Rectangle(start, start, end - start, end - start, floorOptions);
+        entities[floor.id] = floor;
+    };
 
-        // var wall = new Shapes.Circle(x, y, r, {
-        var wall = new Shapes.Rectangle(x, y, Helpers.rand(50, 600), Helpers.rand(50, 600), {
-            color: 'black',
+    var createAndAddBoundries = function () {
+        var wallOptions = {
+            color: '#002C91',
             type: 'wall',
             beforeUpdate: function () {},
-            onCollision: function (collidedObj) {},
-            isDead: false
-        });
+            onCollision: function (collidedObj) {}
+        };
+        var wall1 = new Shapes.Rectangle(start, start, end - start, 20, wallOptions);
+        var wall2 = new Shapes.Rectangle(start, end, end - start, 20, wallOptions);
+        var wall3 = new Shapes.Rectangle(start, start, 20, end - start, wallOptions);
+        var wall4 = new Shapes.Rectangle(end, start, 20, end - start, wallOptions);
+        entities[wall1.id] = wall1;
+        entities[wall2.id] = wall2;
+        entities[wall3.id] = wall3;
+        entities[wall4.id] = wall4;
+    };
+
+    var createAndAddGrid = function () {
+        var gridLineOptions = {
+            type: 'gridLine',
+            color: '#1A5FFF',
+            lineWidth: 0.2
+        };
+
+        var x, y, line;
+        for (x = start; x <= end; x += 100) {
+            line = new Shapes.Line(x, start, x, end, gridLineOptions);
+            entities[line.id] = line;
+        }
+        for (y = start; y <= end; y += 100) {
+            line = new Shapes.Line(start, y, end, y, gridLineOptions);
+            entities[line.id] = line;
+        }
+    };
+
+    var createAndAddWall = function () {
+        var x = Helpers.rand(start, end);
+        var y = Helpers.rand(start, end);
+        // var r = Helpers.rand(10, 200);
+
+        var wall;
+        var wallOptions = {
+            color: '#002C91',
+            type: 'wall',
+            beforeUpdate: function () {},
+            onCollision: function (collidedObj) {}
+        };
+        if (Helpers.rand(0, 2) === 0) {
+            wall = new Shapes.Circle(x, y, Helpers.rand(100, 300), wallOptions);
+        } else {
+            wall = new Shapes.Rectangle(x, y, Helpers.rand(100, 600), Helpers.rand(100, 600), wallOptions);
+        }
         entities[wall.id] = wall;
     };
 
+    //add the boundaries
+    createAndAddFloor();
+
+    //add the boundaries
+    createAndAddBoundries();
+
+    //create the grid
+    createAndAddGrid();
+
     //create some walls
     var i;
-    for (i = 0; i < 50; i += 1) {
+    for (i = 0; i < 75; i += 1) {
         createAndAddWall();
     }
 
     var addNewPlayer = function (ws) {
-        var player = new Shapes.Circle(Helpers.rand(-600, 600), Helpers.rand(-600, 600), 10, {
+        var player = new Shapes.Circle(Helpers.rand(start, end), Helpers.rand(start, end), 10, {
             // var player = new Shapes.Rectangle(Helpers.rand(0, 300), Helpers.rand(0, 300), 10, 10, {
             type: 'player',
-            color: {
-                r: Helpers.rand(100, 200),
-                g: Helpers.rand(100, 200),
-                b: Helpers.rand(100, 200),
-                a: 1
-            },
+            // color: {
+            //     r: Helpers.rand(100, 200),
+            //     g: Helpers.rand(100, 200),
+            //     b: Helpers.rand(100, 200),
+            //     a: 1
+            // },
+            color: '#FFF',
             acc: {
                 left: 0,
                 up: 0,
@@ -105,8 +167,8 @@
             },
             respawn: function () {
                 if (this.isDead) {
-                    this.x = Helpers.rand(0, canvasWidth);
-                    this.y = Helpers.rand(0, canvasHeight);
+                    this.x = Helpers.rand(start, end);
+                    this.y = Helpers.rand(start, end);
                     entities[this.id] = this;
                     delete this.timeToReload;
                     delete this.reloadPercentage;
@@ -127,7 +189,7 @@
                     var bullet = new Shapes.Circle(player.x, player.y, 1.5, {
                         type: 'bullet',
                         playerId: player.id,
-                        color: 'black',
+                        color: '#002C91',
                         damage: 400,
                         beforeUpdate: function () {
                             if (!this.timeAlive) {
@@ -195,8 +257,9 @@
 
                     var gun = new Shapes.Line(player.x, player.y, gunX, gunY, {
                         type: 'gun',
-                        color: 'black',
-                        playerId: player.id
+                        color: '#002C91',
+                        playerId: player.id,
+                        lineWidth: 5
                     });
                     entities[gun.id] = gun;
                     gunMap[ws.playerId] = gun;
@@ -317,10 +380,10 @@
                     if (entities[e2] !== undefined) {
                         if (e1 !== e2 && e1.type !== 'player' && e2.type !== 'player') {
                             if (Collison.check(entities[e1], entities[e2]) === true) {
-                                if (entities[e1] && entities[e2]) {
+                                if (entities[e1] && entities[e2] && entities[e1].onCollision && entities[e2].onCollision) {
                                     entities[e1].onCollision(entities[e2]);
                                 }
-                                if (entities[e1] && entities[e2]) {
+                                if (entities[e1] && entities[e2] && entities[e1].onCollision && entities[e2].onCollision) {
                                     entities[e2].onCollision(entities[e1]);
                                 }
                             }

@@ -252,8 +252,6 @@
                 return color;
             };
 
-
-
             var drawType = function (type) {
                 if (player) {
                     var e;
@@ -274,16 +272,29 @@
                                     ctx.beginPath();
                                     ctx.moveTo(entities[e].x1, entities[e].y1);
                                     ctx.lineTo(entities[e].x2, entities[e].y2);
-                                    ctx.lineWidth = 5;
-                                    ctx.strokeStyle = 'black';
+                                    ctx.lineWidth = entities[e].lineWidth;
+                                    if (entities[e].type === 'gun' && entities[e].playerId !== player.id) {
+                                        ctx.strokeStyle = '#FF7400';
+                                    } else {
+                                        ctx.strokeStyle = getEntityColor(entities[e]);
+                                    }
+                                    ctx.stroke();
+                                }
+
+                                // add stroke to enemies
+                                if (entities[e].type === 'player' && player.id !== entities[e].id && !entities[e].isDead) {
+                                    ctx.beginPath();
+                                    ctx.lineWidth = 3;
+                                    ctx.strokeStyle = '#FF7400';
+                                    ctx.arc(entities[e].x, entities[e].y, entities[e].r, 0, 2 * Math.PI, false);
                                     ctx.stroke();
                                 }
 
                                 // add stroke to current player
-                                if (player.id === entities[e].id && !player.isDead) {
+                                if (entities[e].type === 'player' && player.id === entities[e].id && !player.isDead) {
                                     ctx.beginPath();
                                     ctx.lineWidth = 3;
-                                    ctx.strokeStyle = 'black';
+                                    ctx.strokeStyle = '#002C91';
                                     ctx.arc(entities[e].x, entities[e].y, entities[e].r, 0, 2 * Math.PI, false);
                                     ctx.stroke();
                                 }
@@ -307,6 +318,8 @@
 
                 ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
+                drawType('floor');
+                drawType('gridLine');
                 drawType('bullet');
                 drawType('gun');
                 drawType('player');
@@ -351,6 +364,10 @@
                         ctx.strokeText(serverFps + ' fps (server)', canvas.width() - 10, 40);
                         ctx.fillText(serverFps + ' fps (server)', canvas.width() - 10, 40);
                     }
+
+                    ctx.textAlign = "left";
+                    ctx.strokeText(player.oX + ', ' + player.oY, 10, canvas.height() - 10);
+                    ctx.fillText(player.oX + ', ' + player.oY, 10, canvas.height() - 10);
                 }
 
                 window.requestAnimationFrame(draw);

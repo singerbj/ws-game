@@ -11,19 +11,19 @@
             if (s1 && s2) { // && (Math.sqrt((s1.x - s2.x) * (s1.x - s2.x) + (s1.y - s2.y) * (s1.y - s2.y))) < maxSize) {
                 var dx, dy;
                 if (s1.shape === 'circle' && s2.shape === 'circle') {
-                    if (s1 && s2 && s1.shape !== 'line' && s2.shape !== 'line') {
-                        var crS1 = Helpers.getCenterAndRadius(s1);
-                        var crS2 = Helpers.getCenterAndRadius(s2);
-                        if (crS1 && crS2) {
-                            dx = crS1.x > crS2.x ? crS1.x - crS2.x : crS2.x - crS1.x;
-                            dy = crS1.y > crS2.y ? crS1.y - crS2.y : crS2.y - crS1.y;
-                            var distance = Math.sqrt((dx * dx) + (dy * dy));
+                    // if (s1 && s2 && s1.shape !== 'line' && s2.shape !== 'line') {
+                    var crS1 = Helpers.getCenterAndRadius(s1);
+                    var crS2 = Helpers.getCenterAndRadius(s2);
+                    if (crS1 && crS2) {
+                        dx = crS1.x > crS2.x ? crS1.x - crS2.x : crS2.x - crS1.x;
+                        dy = crS1.y > crS2.y ? crS1.y - crS2.y : crS2.y - crS1.y;
+                        var distance = Math.sqrt((dx * dx) + (dy * dy));
 
-                            if (distance <= (crS1.r + crS2.r)) {
-                                return true;
-                            }
+                        if (distance <= (crS1.r + crS2.r)) {
+                            return true;
                         }
                     }
+                    // }
                 } else if ((s1.shape === 'circle' && s2.shape === 'rectangle') || (s1.shape === 'rectangle' && s2.shape === 'circle')) {
                     var circle, rectangle;
                     if (s1.type === 'circle') {

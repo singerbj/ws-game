@@ -1,6 +1,6 @@
 /*global console, setInterval, module*/
 
-(function(){
+(function () {
     'use strict';
 
     var uuidV4 = require('uuid/v4');
@@ -54,7 +54,8 @@
             y1: y1,
             x2: x2,
             y2: y2,
-            color: 'black'
+            color: 'black',
+            lineWidth: 1
         };
 
         var key;
