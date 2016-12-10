@@ -13,7 +13,7 @@
     var canvasWidth = 960;
     var canvasHeight = 540;
     var start = 1;
-    var end = 4400;
+    var end = 2200;
     var fps;
 
     var entities = {};
@@ -37,9 +37,9 @@
             onCollision: function (collidedObj) {}
         };
         var wall1 = new Shapes.Rectangle(start, start, end - start, 20, wallOptions);
-        var wall2 = new Shapes.Rectangle(start, end, end - start, 20, wallOptions);
+        var wall2 = new Shapes.Rectangle(start, end, end - start + 20, 20, wallOptions);
         var wall3 = new Shapes.Rectangle(start, start, 20, end - start, wallOptions);
-        var wall4 = new Shapes.Rectangle(end, start, 20, end - start, wallOptions);
+        var wall4 = new Shapes.Rectangle(end, start, 20, end - start + 20, wallOptions);
         entities[wall1.id] = wall1;
         entities[wall2.id] = wall2;
         entities[wall3.id] = wall3;
@@ -77,9 +77,9 @@
             onCollision: function (collidedObj) {}
         };
         if (Helpers.rand(0, 2) === 0) {
-            wall = new Shapes.Circle(x, y, Helpers.rand(100, 300), wallOptions);
+            wall = new Shapes.Circle(x, y, Helpers.rand(50, 150), wallOptions);
         } else {
-            wall = new Shapes.Rectangle(x, y, Helpers.rand(100, 600), Helpers.rand(100, 600), wallOptions);
+            wall = new Shapes.Rectangle(x, y, Helpers.rand(50, 300), Helpers.rand(50, 300), wallOptions);
         }
         entities[wall.id] = wall;
     };
@@ -95,13 +95,13 @@
 
     //create some walls
     var i;
-    for (i = 0; i < 75; i += 1) {
+    for (i = 0; i < 20; i += 1) {
         createAndAddWall();
     }
 
     var addNewPlayer = function (ws) {
         var player = new Shapes.Circle(Helpers.rand(start, end), Helpers.rand(start, end), 10, {
-            // var player = new Shapes.Rectangle(Helpers.rand(0, 300), Helpers.rand(0, 300), 10, 10, {
+        // var player = new Shapes.Circle(1000, 1000, 10, {
             type: 'player',
             // color: {
             //     r: Helpers.rand(100, 200),
@@ -135,7 +135,8 @@
             },
             kills: 0,
             deaths: 0,
-            pps: 4,
+            pps: 4.5,
+            username: "Loading...",
             beforeUpdate: function () {
                 this.healthPercentage = Math.floor((this.health / this.maxHealth) * 100);
                 if (this.timeToReload && Date.now() >= this.timeToReload) {
@@ -297,7 +298,6 @@
                                 tempCircle = new Shapes.Circle(tempX, tempY, 10);
                                 while (Collison.check(entities[e1], tempCircle) === true) {
                                     if (tempX !== Math.floor(this.x)) {
-
                                         if (tempX > Math.floor(this.x)) {
                                             tempX -= 1;
                                         } else {
@@ -380,10 +380,10 @@
                     if (entities[e2] !== undefined) {
                         if (e1 !== e2 && e1.type !== 'player' && e2.type !== 'player') {
                             if (Collison.check(entities[e1], entities[e2]) === true) {
-                                if (entities[e1] && entities[e2] && entities[e1].onCollision && entities[e2].onCollision) {
+                                if (entities[e1] && entities[e2] && entities[e1].onCollision) {
                                     entities[e1].onCollision(entities[e2]);
                                 }
-                                if (entities[e1] && entities[e2] && entities[e1].onCollision && entities[e2].onCollision) {
+                                if (entities[e1] && entities[e2] && entities[e2].onCollision) {
                                     entities[e2].onCollision(entities[e1]);
                                 }
                             }
@@ -452,46 +452,41 @@
         },
         handleMessage: function (message, ws) {
             var msgObj = JSON.parse(message);
+            if (playerMap[ws.playerId] && msgObj.x && msgObj.y) {
+                playerMap[ws.playerId].mouse = {
+                    x: msgObj.x,
+                    y: msgObj.y
+                };
+            }
+
+            if(playerMap[ws.playerId] && msgObj.username){
+                playerMap[ws.playerId].username = msgObj.username;
+            }
+
             if (msgObj.type === 'event') {
                 if (msgObj.event === 'click' && playerMap[ws.playerId] !== undefined) {
                     playerMap[ws.playerId].fireGun(msgObj.x, msgObj.y);
                 } else if (msgObj.event === 'keyup' && playerMap[ws.playerId] !== undefined) {
                     playerMap[ws.playerId].dObj[msgObj.direction] = false;
-                    if (msgObj.x && msgObj.y) {
-                        playerMap[ws.playerId].mouse = {
-                            x: msgObj.x,
-                            y: msgObj.y
-                        };
-                    }
                 } else if (msgObj.event === 'keydown' && playerMap[ws.playerId] !== undefined) {
                     playerMap[ws.playerId].dObj[msgObj.direction] = true;
-                    if (msgObj.x && msgObj.y) {
-                        playerMap[ws.playerId].mouse = {
-                            x: msgObj.x,
-                            y: msgObj.y
-                        };
-                    }
                 } else if (msgObj.event === 'mousemove' && playerMap[ws.playerId] !== undefined) {
-                    if (msgObj.x && msgObj.y) {
-                        playerMap[ws.playerId].mouse = {
-                            x: msgObj.x,
-                            y: msgObj.y
-                        };
-                    }
                     playerMap[ws.playerId].manageGun();
                 }
             } else if (msgObj.type === 'action') {
                 if (msgObj.action === 'reload' && playerMap[ws.playerId] !== undefined) {
                     playerMap[ws.playerId].reload();
-                } else if (msgObj.action === 'stopPlayer' && playerMap[ws.playerId] !== undefined) {
-                    playerMap[ws.playerId].stopMoving();
+                // } else if (msgObj.action === 'stopPlayer' && playerMap[ws.playerId] !== undefined) {
+                //     playerMap[ws.playerId].stopMoving();
                 } else if (msgObj.action === 'respawn' && playerMap[ws.playerId] !== undefined) {
                     playerMap[ws.playerId].respawn();
+                }else if(msgObj.action === 'join'){
+                    addNewPlayer(ws);
                 }
             }
         },
         onPlayerConnect: function (ws) {
-            addNewPlayer(ws);
+            // addNewPlayer(ws);
             console.log('player connected: ' + ws.playerId);
 
         },
