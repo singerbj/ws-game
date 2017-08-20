@@ -10,10 +10,10 @@
     var clients;
     var playerMap = {};
     var gunMap = {};
-    var canvasWidth = 960;
-    var canvasHeight = 540;
+    var canvasWidth = 1920;
+    var canvasHeight = 1080;
     var start = 1;
-    var end = 2200;
+    var end = 1080;
     var fps;
 
     var entities = {};
@@ -77,9 +77,9 @@
             onCollision: function (collidedObj) {}
         };
         if (Helpers.rand(0, 2) === 0) {
-            wall = new Shapes.Circle(x, y, Helpers.rand(50, 150), wallOptions);
+            wall = new Shapes.Circle(x, y, Helpers.rand(10, 75), wallOptions);
         } else {
-            wall = new Shapes.Rectangle(x, y, Helpers.rand(50, 300), Helpers.rand(50, 300), wallOptions);
+            wall = new Shapes.Rectangle(x, y, Helpers.rand(10, 75), Helpers.rand(10, 75), wallOptions);
         }
         entities[wall.id] = wall;
     };
@@ -372,6 +372,7 @@
                 player.updatePosition(dt);
             }
         }
+
         //checkCollisions for non players
         var e1, e2;
         for (e1 in entities) {
