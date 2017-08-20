@@ -354,6 +354,9 @@
         return player;
     };
 
+    var QuadTree = require('simple-quadtree');
+    var qt = QuadTree(start, start, end, end, { maxchildren: 5 });
+
     var update = function (dt) {
         //runPreUpdateStuff
         var e;
@@ -373,26 +376,42 @@
             }
         }
 
-        //checkCollisions for non players
-        var e1, e2;
-        for (e1 in entities) {
-            if (entities[e1] !== undefined) {
-                for (e2 in entities) {
-                    if (entities[e2] !== undefined) {
-                        if (e1 !== e2 && e1.type !== 'player' && e2.type !== 'player') {
-                            if (Collison.check(entities[e1], entities[e2]) === true) {
-                                if (entities[e1] && entities[e2] && entities[e1].onCollision) {
-                                    entities[e1].onCollision(entities[e2]);
-                                }
-                                if (entities[e1] && entities[e2] && entities[e2].onCollision) {
-                                    entities[e2].onCollision(entities[e1]);
-                                }
-                            }
-                        }
-                    }
+
+        //set up quadTree //TODO: update entities in quadtree instead of clearing it
+        qt.clear();
+        for (e in entities) {
+            if (entities[e] !== undefined) {
+                if(entities[e].shape === 'circle'){
+                    qt.put({x: entities[e].x - entities[e].r, y: entities[e].y - entities[e].r, w: entities[e].r * 2, h: entities[e].r * 2, id: e });
+                }else{
+                    qt.put({x: entities[e].x, y: entities[e].y, w: entities[e].w, h: entities[e].h, id: e});
                 }
             }
         }
+
+        //checkCollisions for non players
+        var x, y;
+        var sectionSize = Math.floor(end / 10);
+        for(x = start; x <= end; x += sectionSize){
+            for(y = start; y <= end; y += sectionSize){
+                var entitiesFound = qt.get({x: x, y: y, w: sectionSize, h: sectionSize});
+                entitiesFound.forEach(function(e1){
+                    entitiesFound.forEach(function(e2){
+                        if (e1.id !== e2.id && entities[e1.id] && entities[e2.id]){// && entities[e1.id].type !== 'player' && entities[e2.id].type !== 'player') {
+                            if (Collison.check(entities[e1.id], entities[e2.id]) === true) {
+                                if (entities[e1.id] && entities[e2.id] && entities[e1.id].onCollision) {
+                                    entities[e1.id].onCollision(entities[e2.id]);
+                                }
+                                if (entities[e1.id] && entities[e2.id] && entities[e2.id].onCollision) {
+                                    entities[e2.id].onCollision(entities[e1.id]);
+                                }
+                            }
+                        }
+                    });
+                });
+            }
+        }
+
         //run post update stuff
         for (e in entities) {
             if (entities[e] !== undefined) {
