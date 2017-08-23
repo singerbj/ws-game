@@ -182,7 +182,7 @@
                 var player = this;
                 if (player.ammo > 0 && player.reloading === false && !player.isDead) {
                     player.ammo -= 1;
-                    var speed = 12;
+                    var speed = 30;
                     var dist = Math.sqrt(Math.pow((x - player.x), 2) + Math.pow((y - player.y), 2));
                     var vx = ((x - player.x) / dist) * speed;
                     var vy = ((y - player.y) / dist) * speed;
