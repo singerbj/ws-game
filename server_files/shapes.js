@@ -46,32 +46,52 @@
         return rectangle;
     };
 
-    var Line = function (x1, y1, x2, y2, options) {
-        var line = {
+    var Polygon = function (x, y, points, options) {
+        var polygon = {
             id: uuidV4(),
-            shape: "line",
-            x1: x1,
-            y1: y1,
-            x2: x2,
-            y2: y2,
-            color: 'black',
-            lineWidth: 1
+            shape: "polygon",
+            x: x,
+            y: y,
+            points: points,
+            color: 'black'
         };
 
         var key;
         for (key in options) {
             if (options[key] !== undefined) {
-                line[key] = options[key];
+                polygon[key] = options[key];
             }
         }
 
-        return line;
+        return polygon;
     };
+
+    // var Line = function (x1, y1, x2, y2, options) {
+    //     var line = {
+    //         id: uuidV4(),
+    //         shape: "line",
+    //         x1: x1,
+    //         y1: y1,
+    //         x2: x2,
+    //         y2: y2,
+    //         color: 'black',
+    //         lineWidth: 1
+    //     };
+    //
+    //     var key;
+    //     for (key in options) {
+    //         if (options[key] !== undefined) {
+    //             line[key] = options[key];
+    //         }
+    //     }
+    //
+    //     return line;
+    // };
 
     module.exports = {
         Circle: Circle,
         Rectangle: Rectangle,
-        Line: Line
+        Polygon: Polygon
     };
 
 }());
