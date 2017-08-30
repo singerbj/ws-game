@@ -55,11 +55,11 @@
 
         var x, y, line;
         for (x = start; x <= end; x += 100) {
-            line = new Shapes.Polygon(x, start, [{x: x, y: start},{x: x, y: end}], gridLineOptions);
+            line = new Shapes.Line(x, start, x, end, gridLineOptions);
             entities[line.id] = line;
         }
         for (y = start; y <= end; y += 100) {
-            line = new Shapes.Polygon(start, y, [{x: start, y: y},{x: end, y: y}], gridLineOptions);
+            line = new Shapes.Line(start, y, end, y, gridLineOptions);
             entities[line.id] = line;
         }
     };
@@ -76,11 +76,11 @@
             beforeUpdate: function () {},
             onCollision: function (collidedObj) {}
         };
-        // if (Helpers.rand(0, 2) === 0) {
-            // wall = new Shapes.Circle(x, y, Helpers.rand(10, 75), wallOptions);
-        // } else {
+        if (Helpers.rand(0, 2) === 0) {
+            wall = new Shapes.Circle(x, y, Helpers.rand(10, 75), wallOptions);
+        } else {
             wall = new Shapes.Rectangle(x, y, Helpers.rand(10, 75), Helpers.rand(10, 75), wallOptions);
-        // }
+        }
         entities[wall.id] = wall;
     };
 
@@ -95,7 +95,7 @@
 
     //create some walls
     var i;
-    for (i = 0; i < 40; i += 1) {
+    for (i = 0; i < 20; i += 1) {
         createAndAddWall();
     }
 
@@ -187,7 +187,7 @@
                     var vx = ((x - player.x) / dist) * speed;
                     var vy = ((y - player.y) / dist) * speed;
 
-                    var bullet = new Shapes.Circle(player.x, player.y, 1.25, {
+                    var bullet = new Shapes.Circle(player.x, player.y, 1.5, {
                         type: 'bullet',
                         playerId: player.id,
                         color: '#002C91',
@@ -205,7 +205,7 @@
                             }
                         },
                         onCollision: function (collidedObj) {
-                            if (collidedObj && collidedObj.id !== this.playerId && collidedObj.shape !== 'polygon') {
+                            if (collidedObj && collidedObj.id !== this.playerId && collidedObj.shape !== 'line') {
                                 if (collidedObj && collidedObj.type === 'player' && !collidedObj.isDead) {
                                     if (collidedObj.health > 0 && (collidedObj.health - this.damage) > 0) {
                                         collidedObj.health = collidedObj.health - this.damage;
@@ -256,7 +256,7 @@
                         gunY = player.y + gunLength;
                     }
 
-                    var gun = new Shapes.Polygon(player.x, player.y, [{x: player.x, y: player.y}, {x: gunX, y: gunY}], {
+                    var gun = new Shapes.Line(player.x, player.y, gunX, gunY, {
                         type: 'gun',
                         color: '#002C91',
                         playerId: player.id,
@@ -383,25 +383,8 @@
             if (entities[e] !== undefined) {
                 if(entities[e].shape === 'circle'){
                     qt.put({x: entities[e].x - entities[e].r, y: entities[e].y - entities[e].r, w: entities[e].r * 2, h: entities[e].r * 2, id: e });
-                } else if (entities[e].shape === 'rectangle'){
+                }else{
                     qt.put({x: entities[e].x, y: entities[e].y, w: entities[e].w, h: entities[e].h, id: e});
-                } else if (entities[e].shape === 'polygon'){
-                    var x, y, x2, y2;
-                    entities[e].points.forEach(function(point){
-                        if(!x || point.x < x){
-                            x = point.x;
-                        }
-                        if(!x2 || point.x > x2){
-                            x2 = point.x;
-                        }
-                        if(!y || point.y < y){
-                            y = point.y;
-                        }
-                        if(!y2 || point.y > y2){
-                            y2 = point.y;
-                        }
-                    });
-                    qt.put({x: x, y: y, w: x2 - x, h: y2 - y, id: e});
                 }
             }
         }

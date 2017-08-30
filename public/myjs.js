@@ -24,38 +24,55 @@
         return can;
     };
 
-    var createCanvas = function (container) {
-        //TODO: fix this
+    var getCanvasDimensions = function(){
+        var width = 1920;
+        var height = 1080;
 
-        var width = 960;
-        var height = 540;
-        var maxWidth = container.width() - 10;
-        var maxHeight = container.height() - 10;
+        var maxWidth = $(window).width();
+        var maxHeight = $(window).height();
 
-        var ratio = maxWidth / width;
-        if (height * ratio > maxHeight) {
-            ratio = maxHeight / height;
+        var widthDiff = width - maxWidth;
+        var heightDiff = height - maxHeight;
+        var scale;
+        if(widthDiff > 0 && widthDiff > heightDiff){
+            scale = maxWidth / width;
+        }else if(heightDiff > 0 && widthDiff > heightDiff){
+            scale = maxHeight / height;
         }
 
-        var canvas = createHiDPICanvas(width, height, 2);
-        container.append(canvas);
+        return {
+            width: width,
+            height: height,
+            scale: scale
+        };
+    };
+
+    var createCanvas = function (container, dims) {
+        var canvas = createHiDPICanvas(dims.width * dims.scale, dims.height * dims.scale, 1.5);
+        container.empty().append(canvas);
         return canvas;
     };
 
     window.onload = function () {
         var body = $('body');
         var cc = $('.canvas-container');
-        // var canvas = $('#canvas');
-        // var ctx = canvas[0].getContext('2d');
 
-        var canvas = $(createCanvas(cc));
-        canvas.css('border', '1px solid black');
+        var dims = getCanvasDimensions();
+        var canvas = $(createCanvas(cc, dims));
         var ctx = canvas[0].getContext('2d');
         var rect = ctx.canvas.getBoundingClientRect();
 
-        // $(window).resize(function() {
-        //     setCanvasSize(ctx);
-        // });
+        var resizeTimeout;
+        $(window).resize(function(){
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(function(){
+                dims = getCanvasDimensions();
+                canvas = $(createCanvas(cc, dims));
+                ctx = canvas[0].getContext('2d');
+                rect = ctx.canvas.getBoundingClientRect();
+            }, 100);
+        });
+
         var entities = {};
         var player;
         var serverFps;
