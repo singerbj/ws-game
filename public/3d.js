@@ -2,81 +2,57 @@
 (function () {
     'use strict';
 
-    var PIXEL_RATIO = (function () {
-        var ctx = document.createElement("canvas").getContext("2d"),
-            dpr = window.devicePixelRatio || 1,
-            bsr = ctx.webkitBackingStorePixelRatio || ctx.mozBackingStorePixelRatio || ctx.msBackingStorePixelRatio || ctx.oBackingStorePixelRatio || ctx.backingStorePixelRatio || 1;
-
-        return dpr / bsr;
-    }());
-
-
-    var createHiDPICanvas = function (w, h, ratio) {
-        if (!ratio) {
-            ratio = PIXEL_RATIO;
-        }
-        var can = document.createElement("canvas");
-        can.width = w * ratio;
-        can.height = h * ratio;
-        can.style.width = w + "px";
-        can.style.height = h + "px";
-        can.getContext("2d").setTransform(ratio, 0, 0, ratio, 0, 0);
-        return can;
-    };
-
     var getCanvasDimensions = function(){
-        var width = 1920;
-        var height = 1080;
-
+        // var width = 1920;
+        // var height = 1920;
         var maxWidth = $(window).width();
         var maxHeight = $(window).height();
+        var r;
 
-        var widthDiff = width - maxWidth;
-        var heightDiff = height - maxHeight;
-        var scale;
-        if(widthDiff > 0 && widthDiff > heightDiff){
-            scale = maxWidth / width;
-        }else if(heightDiff > 0 && widthDiff > heightDiff){
-            scale = maxHeight / height;
+        if(maxWidth < maxHeight){
+            r = maxWidth;
+        } else {
+            r = maxHeight;
         }
-
-        return {
-            width: width,
-            height: height,
-            scale: scale
-        };
-    };
-
-    var createCanvas = function (container, dims) {
-        var canvas = createHiDPICanvas(dims.width * dims.scale, dims.height * dims.scale, 1.5);
-        container.empty().append(canvas);
-        return canvas;
+        console.log(r);
+        return r;
     };
 
     window.onload = function () {
         var body = $('body');
-        var cc = $('.canvas-container');
 
-        var dims = getCanvasDimensions();
-        var scene = new THREE.Scene();
-        var camera = new THREE.PerspectiveCamera(50, 400 / 400, 0.1, 1000);
+        var size = getCanvasDimensions();
 
         var renderer = new THREE.WebGLRenderer();
         renderer.shadowMapEnabled = true;
-        renderer.setSize(dims.width, dims.height);
         document.body.appendChild(renderer.domElement);
+        renderer.setSize(size, size);
+
+        var canvas = $('canvas');
+        var ctx = canvas[0].getContext('webgl');
+        var rect = ctx.canvas.getBoundingClientRect();
 
         var resizeTimeout;
         $(window).resize(function(){
             clearTimeout(resizeTimeout);
             resizeTimeout = setTimeout(function(){
-                dims = getCanvasDimensions();
-                canvas = $(createCanvas(cc, dims));
-                ctx = canvas[0].getContext('2d');
-                rect = ctx.canvas.getBoundingClientRect();
+                size = getCanvasDimensions();
+                renderer.setSize(size, size);
             }, 100);
         });
 
+        var scene = new THREE.Scene();
+        var camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100000);
+        camera.position.set(0, 0, 1000);
+
+        var light = new THREE.DirectionalLight( 0xffffff );
+        light.position.set(0, 0, -100);
+        light.target.position.set( 0, 0, 0 );
+        scene.add(light);
+
+        var objHeight = 100;
+        var objectMap = {};
+        var gunMap = {};
         var entities = {};
         var player;
         var serverFps;
@@ -88,6 +64,10 @@
         var joined;
         var username;
         var showScores;
+
+        // var floor = new THREE.Mesh(new THREE.BoxBufferGeometry(19200, 10800, objHeight), new THREE.MeshBasicMaterial({color: '#d3d3d3'}));
+        // floor.position.set(0, 0, -objHeight);
+        // scene.add(floor);
 
         var start = function (websocketServerLocation) {
             if (websocket) {
@@ -175,7 +155,7 @@
             };
 
             joinGame = function(){
-                body.mousedown(function (e) {
+                canvas.mousedown(function (e) {
                     if (joined && player && player.oX && player.oY) {
                         mouseX = e.clientX - rect.left;
                         mouseY = e.clientY - rect.top;
@@ -189,7 +169,7 @@
                     }
                 }).mouseup(function (e) {});
 
-                body.mousemove(function (e) {
+                canvas.mousemove(function (e) {
                     if (joined && player && player.oX && player.oY) {
                         e.preventDefault();
                         e.stopImmediatePropagation();
@@ -311,52 +291,91 @@
                         for (e in entities) {
                             if (entities[e] !== undefined) {
                                 if (entities[e].type === type) {
-                                    if (entities[e].shape === 'circle' && !entities[e].isDead) {
-                                        ctx.beginPath();
-                                        ctx.fillStyle = getEntityColor(entities[e]);
-                                        ctx.arc(entities[e].x, entities[e].y, entities[e].r, 0, 2 * Math.PI, false);
-                                        ctx.fill();
-                                    } else if (entities[e].shape === 'rectangle') {
-                                        ctx.beginPath();
-                                        ctx.fillStyle = getEntityColor(entities[e]);
-                                        ctx.rect(entities[e].x, entities[e].y, entities[e].w, entities[e].h);
-                                        ctx.fill();
-                                    } else if (entities[e].shape === 'line') {
-                                        ctx.beginPath();
-                                        ctx.moveTo(entities[e].x1, entities[e].y1);
-                                        ctx.lineTo(entities[e].x2, entities[e].y2);
-                                        ctx.lineWidth = entities[e].lineWidth;
-                                        if (entities[e].type === 'gun' && entities[e].playerId !== player.id) {
-                                            ctx.strokeStyle = '#FF7400';
-                                        } else {
-                                            ctx.strokeStyle = getEntityColor(entities[e]);
+                                    if(!entities[e].isDead){
+                                        if (entities[e].shape === 'circle') {
+                                            // ctx.beginPath();
+                                            // ctx.fillStyle = getEntityColor(entities[e]);
+                                            // ctx.arc(entities[e].x, entities[e].y, entities[e].r, 0, 2 * Math.PI, false);
+                                            // ctx.fill();
+                                            if(!objectMap[entities[e].id]){
+                                                // objectMap[entities[e].id] = new THREE.Mesh(new THREE.CylinderGeometry( entities[e].r, entities[e].r, objHeight, 1000), new THREE.MeshBasicMaterial({color: getEntityColor(entities[e])}))
+                                                objectMap[entities[e].id] = new THREE.Mesh(new THREE.SphereGeometry(entities[e].r, 32, 32 ), new THREE.MeshBasicMaterial({color: getEntityColor(entities[e])}));
+                                                scene.add(objectMap[entities[e].id]);
+                                                // objectMap[entities[e].id].rotation.x = 90;
+                                            }
+
+                                            objectMap[entities[e].id].position.set(entities[e].x, -entities[e].y, objHeight / 2);
+                                        } else if (entities[e].shape === 'rectangle') {
+                                            // ctx.beginPath();
+                                            // ctx.fillStyle = getEntityColor(entities[e]);
+                                            // ctx.rect(entities[e].x, entities[e].y, entities[e].w, entities[e].h);
+                                            // ctx.fill();
+                                            if(!objectMap[entities[e].id]){
+                                                objectMap[entities[e].id] = new THREE.Mesh(new THREE.BoxBufferGeometry( entities[e].w, entities[e].h, objHeight), new THREE.MeshBasicMaterial({color: getEntityColor(entities[e])}));
+                                                scene.add(objectMap[entities[e].id]);
+                                            }
+                                            objectMap[entities[e].id].position.set(entities[e].x + (entities[e].w / 2), -(entities[e].y + (entities[e].h / 2)), 0);
+                                        } else if (entities[e].shape === 'line') {
+                                            // ctx.beginPath();
+                                            // ctx.moveTo(entities[e].x1, entities[e].y1);
+                                            // ctx.lineTo(entities[e].x2, entities[e].y2);
+                                            // ctx.lineWidth = entities[e].lineWidth;
+                                            // if (entities[e].type === 'gun' && entities[e].playerId !== player.id) {
+                                            //     // ctx.strokeStyle = '#FF7400';
+                                            // } else {
+                                            //     // ctx.strokeStyle = getEntityColor(entities[e]);
+                                            // }
+                                            // ctx.stroke();
+
+                                            if(entities[e].type !== 'gun'){
+
+                                                if(!objectMap[entities[e].id]){
+                                                    var geometry = new THREE.Geometry();
+                                                    geometry.vertices.push(new THREE.Vector3(entities[e].x1, -entities[e].y1, 0));
+                                                    geometry.vertices.push(new THREE.Vector3(entities[e].x2, -entities[e].y2, 0));
+                                                    objectMap[entities[e].id] = new THREE.Line(geometry, new THREE.LineBasicMaterial({ color: 0x00ff00 }));
+                                                    scene.add(objectMap[entities[e].id]);
+                                                }
+                                                objectMap[entities[e].id].geometry.vertices[0].x = entities[e].x1;
+                                                objectMap[entities[e].id].geometry.vertices[0].y = -entities[e].y1;
+                                                objectMap[entities[e].id].geometry.vertices[1].x = entities[e].x2;
+                                                objectMap[entities[e].id].geometry.vertices[1].y = -entities[e].y2;
+                                                objectMap[entities[e].id].geometry.verticesNeedUpdate = true;
+
+                                                if(entities[e].type === 'bullet'){
+                                                    scene.remove(objectMap[entities[e].id]);
+                                                }
+                                            }
+
                                         }
-                                        ctx.stroke();
+                                    }else{console.log(entities[e]);
+                                        scene.remove(objectMap[entities[e].id]);
+                                        delete objectMap[entities[e].id];
                                     }
 
                                     // add stroke to current player
                                     if (entities[e].type === 'player' && player.id === entities[e].id && !player.isDead) {
-                                        ctx.beginPath();
-                                        ctx.lineWidth = 3;
-                                        ctx.strokeStyle = '#002C91';
-                                        ctx.arc(entities[e].x, entities[e].y, entities[e].r, 0, 2 * Math.PI, false);
-                                        ctx.stroke();
+                                        // ctx.beginPath();
+                                        // ctx.lineWidth = 3;
+                                        // ctx.strokeStyle = '#002C91';
+                                        // ctx.arc(entities[e].x, entities[e].y, entities[e].r, 0, 2 * Math.PI, false);
+                                        // ctx.stroke();
                                     }
 
                                     // add stroke and username to enemies
                                     if (entities[e].type === 'player' && player.id !== entities[e].id && !entities[e].isDead) {
-                                        ctx.beginPath();
-                                        ctx.lineWidth = 3;
-                                        ctx.strokeStyle = '#FF7400';
-                                        ctx.arc(entities[e].x, entities[e].y, entities[e].r, 0, 2 * Math.PI, false);
-                                        ctx.stroke();
-
-                                        ctx.font = "10px sans-serif";
-                                        ctx.textAlign = "center";
-                                        ctx.strokeStyle = 'white';
-                                        ctx.fillStyle = 'black';
-                                        ctx.strokeText(entities[e].username, entities[e].x, entities[e].y - 30);
-                                        ctx.fillText(entities[e].username, entities[e].x, entities[e].y - 30);
+                                        // ctx.beginPath();
+                                        // ctx.lineWidth = 3;
+                                        // ctx.strokeStyle = '#FF7400';
+                                        // ctx.arc(entities[e].x, entities[e].y, entities[e].r, 0, 2 * Math.PI, false);
+                                        // ctx.stroke();
+                                        //
+                                        // ctx.font = "10px sans-serif";
+                                        // ctx.textAlign = "center";
+                                        // ctx.strokeStyle = 'white';
+                                        // ctx.fillStyle = 'black';
+                                        // ctx.strokeText(entities[e].username, entities[e].x, entities[e].y - 30);
+                                        // ctx.fillText(entities[e].username, entities[e].x, entities[e].y - 30);
                                     }
 
                                     if(entities[e].type === 'player'){
@@ -366,10 +385,10 @@
                             }
                         }
 
-                        ctx.font = "10px sans-serif";
-                        ctx.textAlign = "center";
-                        ctx.strokeStyle = 'white';
-                        ctx.fillStyle = 'black';
+                        // ctx.font = "10px sans-serif";
+                        // ctx.textAlign = "center";
+                        // ctx.strokeStyle = 'white';
+                        // ctx.fillStyle = 'black';
                         if(showScores){
                             if(players.length > 0){
                                 players = players.sort(function(player1, player2){
@@ -385,17 +404,17 @@
 
                                 var currentHeight = 20;
                                 players.forEach(function(player){
-                                    ctx.strokeText(player.username + ': ' + player.kills, canvas.width() / 2, currentHeight);
-                                    ctx.fillText(player.username + ': ' + player.kills, canvas.width() / 2, currentHeight);
+                                    // ctx.strokeText(player.username + ': ' + player.kills, canvas.width() / 2, currentHeight);
+                                    // ctx.fillText(player.username + ': ' + player.kills, canvas.width() / 2, currentHeight);
                                     currentHeight += 20;
                                 });
                             }else{
-                                ctx.strokeText('Loading...', canvas.width() / 2, 20);
-                                ctx.fillText('Loading...', canvas.width() / 2, 20);
+                                // ctx.strokeText('Loading...', canvas.width() / 2, 20);
+                                // ctx.fillText('Loading...', canvas.width() / 2, 20);
                             }
                         }else{
-                            ctx.strokeText('Hold Tab to see scores...', canvas.width() / 2, 20);
-                            ctx.fillText('Hold Tab to see scores...', canvas.width() / 2, 20);
+                            // ctx.strokeText('Hold Tab to see scores...', canvas.width() / 2, 20);
+                            // ctx.fillText('Hold Tab to see scores...', canvas.width() / 2, 20);
                         }
                     }
                 };
@@ -412,9 +431,10 @@
                     }
                     lastTime = currentTime;
 
-                    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                    // ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-                    drawType('floor');
+                    // drawType('floor');
+
                     drawType('gridLine');
                     drawType('bullet');
                     drawType('gun');
@@ -422,55 +442,61 @@
                     drawType('player');
 
                     if (player) {
-                        ctx.font = "bold 14px sans-serif";
-                        ctx.textAlign = "left";
-                        ctx.strokeStyle = 'white';
-                        ctx.fillStyle = 'black';
-                        ctx.strokeText('Ammo: ' + player.ammo + '/' + player.maxAmmo, 10, 20);
-                        ctx.fillText('Ammo: ' + player.ammo + '/' + player.maxAmmo, 10, 20);
+                        camera.position.x = player.x;
+                        camera.position.y = -player.y;
+                        light.position.x = player.x;
+                        light.position.y = -player.y;
+
+                        // ctx.font = "bold 14px sans-serif";
+                        // ctx.textAlign = "left";
+                        // ctx.strokeStyle = 'white';
+                        // ctx.fillStyle = 'black';
+                        // ctx.strokeText('Ammo: ' + player.ammo + '/' + player.maxAmmo, 10, 20);
+                        // ctx.fillText('Ammo: ' + player.ammo + '/' + player.maxAmmo, 10, 20);
                         if (player.reloadPercentage) {
-                            ctx.strokeText('Ammo: ' + player.reloadPercentage + '% reloaded...', 110, 20);
-                            ctx.fillText('Ammo: ' + player.reloadPercentage + '% reloaded...', 110, 20);
+                            // ctx.strokeText('Ammo: ' + player.reloadPercentage + '% reloaded...', 110, 20);
+                            // ctx.fillText('Ammo: ' + player.reloadPercentage + '% reloaded...', 110, 20);
                         } else if (player.ammo === 0) {
-                            ctx.strokeText('Ammo: Press R to reload!', 110, 20);
-                            ctx.fillText('Ammo: Press R to reload!', 110, 20);
+                            // ctx.strokeText('Ammo: Press R to reload!', 110, 20);
+                            // ctx.fillText('Ammo: Press R to reload!', 110, 20);
                         }
 
-                        ctx.strokeText('Kills: ' + player.kills, 10, 40);
-                        ctx.fillText('Kills: ' + player.kills, 10, 40);
-                        ctx.strokeText('Deaths: ' + player.deaths, 10, 60);
-                        ctx.fillText('Deaths: ' + player.deaths, 10, 60);
-                        ctx.strokeText('Health: ' + player.healthPercentage + '%', 10, 80);
-                        ctx.fillText('Health: ' + player.healthPercentage + '%', 10, 80);
+                        // ctx.strokeText('Kills: ' + player.kills, 10, 40);
+                        // ctx.fillText('Kills: ' + player.kills, 10, 40);
+                        // ctx.strokeText('Deaths: ' + player.deaths, 10, 60);
+                        // ctx.fillText('Deaths: ' + player.deaths, 10, 60);
+                        // ctx.strokeText('Health: ' + player.healthPercentage + '%', 10, 80);
+                        // ctx.fillText('Health: ' + player.healthPercentage + '%', 10, 80);
 
                         if (player.isDead) {
-                            ctx.strokeText('Press Spacebar to respawn!', 10, 100);
-                            ctx.fillText('Press Spacebar to respawn!', 10, 100);
+                            // ctx.strokeText('Press Spacebar to respawn!', 10, 100);
+                            // ctx.fillText('Press Spacebar to respawn!', 10, 100);
                         }
 
-                        ctx.textAlign = "right";
-                        ctx.strokeText(player.username, canvas.width() - 10, canvas.height() - 10);
-                        ctx.fillText(player.username, canvas.width() - 10, canvas.height() - 10);
+                        // ctx.textAlign = "right";
+                        // ctx.strokeText(player.username, canvas.width() - 10, canvas.height() - 10);
+                        // ctx.fillText(player.username, canvas.width() - 10, canvas.height() - 10);
 
                         if (fps) {
-                            ctx.textAlign = "right";
-                            ctx.strokeText(fps + ' fps (browser)', canvas.width() - 10, 20);
-                            ctx.fillText(fps + ' fps (browser)', canvas.width() - 10, 20);
+                            // ctx.textAlign = "right";
+                            // ctx.strokeText(fps + ' fps (browser)', canvas.width() - 10, 20);
+                            // ctx.fillText(fps + ' fps (browser)', canvas.width() - 10, 20);
                         }
 
                         if (serverFps) {
-                            ctx.textAlign = "right";
-                            ctx.strokeText(serverFps + ' fps (server)', canvas.width() - 10, 40);
-                            ctx.fillText(serverFps + ' fps (server)', canvas.width() - 10, 40);
+                            // ctx.textAlign = "right";
+                            // ctx.strokeText(serverFps + ' fps (server)', canvas.width() - 10, 40);
+                            // ctx.fillText(serverFps + ' fps (server)', canvas.width() - 10, 40);
                         }
 
-                        ctx.textAlign = "left";
-                        ctx.strokeText(player.oX + ', ' + player.oY, 10, canvas.height() - 10);
-                        ctx.fillText(player.oX + ', ' + player.oY, 10, canvas.height() - 10);
+                        // ctx.textAlign = "left";
+                        // ctx.strokeText(player.oX + ', ' + player.oY, 10, canvas.height() - 10);
+                        // ctx.fillText(player.oX + ', ' + player.oY, 10, canvas.height() - 10);
 
 
                     }
 
+                    renderer.render(scene, camera);
                     window.requestAnimationFrame(draw);
                 };
                 draw();
