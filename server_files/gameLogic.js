@@ -13,7 +13,7 @@
     var canvasWidth = 1920;
     var canvasHeight = 1080;
     var start = 1;
-    var end = 1080;
+    var end = 1000;
     var fps;
 
     var entities = {};
@@ -76,11 +76,11 @@
             beforeUpdate: function () {},
             onCollision: function (collidedObj) {}
         };
-        if (Helpers.rand(0, 2) === 0) {
-            wall = new Shapes.Circle(x, y, Helpers.rand(10, 75), wallOptions);
-        } else {
+        // if (Helpers.rand(0, 2) === 0) {
+            // wall = new Shapes.Circle(x, y, Helpers.rand(10, 75), wallOptions);
+        // } else {
             wall = new Shapes.Rectangle(x, y, Helpers.rand(10, 75), Helpers.rand(10, 75), wallOptions);
-        }
+        // }
         entities[wall.id] = wall;
     };
 
@@ -136,7 +136,9 @@
             kills: 0,
             deaths: 0,
             pps: 4.5,
+            aimingPps: 2,
             username: "Loading...",
+            aiming: false,
             beforeUpdate: function () {
                 this.healthPercentage = Math.floor((this.health / this.maxHealth) * 100);
                 if (this.timeToReload && Date.now() >= this.timeToReload) {
@@ -181,16 +183,20 @@
             fireGun: function (x, y, ws) {
                 var player = this;
                 if (player.ammo > 0 && player.reloading === false && !player.isDead) {
+                    if(!player.aiming){
+                        x += Helpers.rand(-30,30);
+                        y += Helpers.rand(-30,30);
+                    }
                     player.ammo -= 1;
                     var speed = 30;
                     var dist = Math.sqrt(Math.pow((x - player.x), 2) + Math.pow((y - player.y), 2));
                     var vx = ((x - player.x) / dist) * speed;
                     var vy = ((y - player.y) / dist) * speed;
 
-                    var bullet = new Shapes.Circle(player.x, player.y, 1.5, {
+                    var bullet = new Shapes.Line(player.x, player.y, player.x + (vx * 2), player.y + (vy * 2), {
                         type: 'bullet',
                         playerId: player.id,
-                        color: '#002C91',
+                        color: '#FFFFFF',
                         damage: 400,
                         beforeUpdate: function () {
                             if (!this.timeAlive) {
@@ -200,8 +206,10 @@
                                 delete entities[this.id];
                             } else {
                                 this.timeAlive = this.timeAlive + 1;
-                                this.x = this.x + vx;
-                                this.y = this.y + vy;
+                                this.x1 = this.x1 + vx;
+                                this.y1 = this.y1 + vy;
+                                this.x2 = this.x2 + vx;
+                                this.y2 = this.y2 + vy;
                             }
                         },
                         onCollision: function (collidedObj) {
@@ -288,8 +296,14 @@
                     this.adjustAcc('right', this.pps);
                     this.adjustAcc('down', this.pps);
 
-                    var tempX = Math.floor(this.x - (this.pps * (this.acc.left - this.acc.right) * dt));
-                    var tempY = Math.floor(this.y - (this.pps * (this.acc.up - this.acc.down) * dt));
+                    var tempX, tempY;
+                    if(!this.aiming){
+                        tempX = Math.floor(this.x - (this.pps * (this.acc.left - this.acc.right) * dt));
+                        tempY = Math.floor(this.y - (this.pps * (this.acc.up - this.acc.down) * dt));
+                    }else{
+                        tempX = Math.floor(this.x - ((this.aimingPps) * (this.acc.left - this.acc.right) * dt));
+                        tempY = Math.floor(this.y - ((this.aimingPps) * (this.acc.up - this.acc.down) * dt));
+                    }
 
                     var e1, tempCircle, e1x, e1y;
                     for (e1 in entities) {
@@ -485,7 +499,13 @@
 
             if (msgObj.type === 'event') {
                 if (msgObj.event === 'click' && playerMap[ws.playerId] !== undefined) {
-                    playerMap[ws.playerId].fireGun(msgObj.x, msgObj.y);
+                    if(msgObj.which === 1){
+                        playerMap[ws.playerId].fireGun(msgObj.x, msgObj.y);
+                    } else if(msgObj.which === 2){
+                        //middle click
+                    } else if(msgObj.which === 3){
+                        playerMap[ws.playerId].aiming = !playerMap[ws.playerId].aiming;
+                    }
                 } else if (msgObj.event === 'keyup' && playerMap[ws.playerId] !== undefined) {
                     playerMap[ws.playerId].dObj[msgObj.direction] = false;
                 } else if (msgObj.event === 'keydown' && playerMap[ws.playerId] !== undefined) {

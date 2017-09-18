@@ -43,7 +43,7 @@ var B = SAT.Box;
         }
         return false;
     };
-    
+
     module.exports = {
         check: check
     };

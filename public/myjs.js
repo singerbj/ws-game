@@ -179,6 +179,7 @@
                         send({
                             type: 'event',
                             event: 'click',
+                            which: e.which,
                             x: (mouseX - (rect.width / 2)) + player.oX,
                             y: (mouseY - (rect.height / 2)) + player.oY
                         });
